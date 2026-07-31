@@ -6,12 +6,12 @@ import { ProductIcon } from "@/components/product/Icon";
 import { useProduct } from "@/components/product/ProductProvider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { templates } from "@/lib/product-data";
+import { CUSTOM_TEMPLATE_ID, getTemplatesForMode } from "@/lib/product-data";
 
 export default function TemplatesPage() {
   const router = useRouter();
   const product = useProduct();
-  const available = templates.filter((template) => template.modeIds.includes(product.mode.id));
+  const available = getTemplatesForMode(product.mode.id);
 
   function choose(id: string, starter?: string) {
     product.clearChat();
@@ -22,6 +22,11 @@ export default function TemplatesPage() {
   return (
     <>
       <PageHeader eyebrow={`${product.mode.name} mode`} title="Documentation templates" description="Each template includes five professional starting scenarios. Choose one and the copilot will ask only for the clinical facts needed to customize it." />
+      <div className="mb-4 rounded-2xl border border-dashed border-[var(--primary)]/40 bg-[var(--primary-soft)] p-5">
+        <h2 className="font-semibold">Custom Template</h2>
+        <p className="mt-1 text-sm text-[var(--muted-foreground)]">Can&apos;t find the template you need? Describe your documentation naturally and let ShiftNote generate a professional note.</p>
+        <Button className="mt-4" onClick={() => { product.setTemplate(CUSTOM_TEMPLATE_ID); product.clearChat(); router.push("/copilot"); }}>Use Custom Template</Button>
+      </div>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {available.map((template) => (
           <Card key={template.id}><CardContent>
@@ -39,7 +44,7 @@ export default function TemplatesPage() {
         <section className="mt-10">
           <h2 className="text-xl font-semibold">My Templates</h2>
           <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {product.customTemplates.map((item) => <Card key={item.id}><CardContent><h3 className="font-semibold">{item.title}</h3><p className="mt-2 line-clamp-3 text-xs leading-5 text-[var(--muted-foreground)]">{item.preview}</p><Button className="mt-4" onClick={() => choose(item.templateId, `Use this saved custom template as the structure and ask me what should be updated: ${item.preview}`)} size="sm">Use custom template</Button></CardContent></Card>)}
+            {product.customTemplates.filter((item) => item.modeId === product.mode.id).map((item) => <Card key={item.id}><CardContent><h3 className="font-semibold">{item.name}</h3><p className="mt-2 line-clamp-3 text-xs leading-5 text-[var(--muted-foreground)]">{item.description}</p><Button className="mt-4" onClick={() => { product.clearChat(); router.push("/copilot"); }} size="sm">Use custom template</Button></CardContent></Card>)}
           </div>
         </section>
       )}

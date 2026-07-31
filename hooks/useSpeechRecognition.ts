@@ -4,10 +4,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 type Options = {
   onTranscript: (text: string) => void;
+  onEnd?: () => void;
   language?: string;
 };
 
-export function useSpeechRecognition({ onTranscript, language = "en-US" }: Options) {
+export function useSpeechRecognition({ onTranscript, onEnd, language = "en-US" }: Options) {
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const [isListening, setIsListening] = useState(false);
   const [isSupported] = useState(
@@ -16,6 +17,9 @@ export function useSpeechRecognition({ onTranscript, language = "en-US" }: Optio
       Boolean(window.SpeechRecognition ?? window.webkitSpeechRecognition),
   );
   const [error, setError] = useState<string | null>(null);
+  const supportMessage = typeof window !== "undefined" && !window.isSecureContext
+    ? "Voice input requires a secure connection (HTTPS) or localhost. Open ShiftNote over HTTPS, then allow microphone access."
+    : "Voice input is not supported by this browser. Use the latest Chrome or Edge, then allow microphone access when prompted.";
 
   useEffect(() => {
     const Recognition = window.SpeechRecognition ?? window.webkitSpeechRecognition;
@@ -26,34 +30,61 @@ export function useSpeechRecognition({ onTranscript, language = "en-US" }: Optio
     recognition.interimResults = true;
     recognition.lang = language;
     recognition.onresult = (event) => {
-      let transcript = "";
-      for (let i = event.results.length - 1; i >= 0; i -= 1) {
-        transcript = event.results[i][0].transcript;
-        if (event.results[i].isFinal) break;
+      const segments: string[] = [];
+      for (let i = 0; i < event.results.length; i += 1) {
+        segments.push(event.results[i][0].transcript);
       }
-      onTranscript(transcript.trim());
+      onTranscript(segments.join(" ").trim());
     };
     recognition.onerror = (event) => {
-      setError(event.error === "not-allowed" ? "Microphone permission was denied." : "Voice input stopped unexpectedly.");
+      const messages: Record<string, string> = {
+        "not-allowed": "Microphone access was denied. Allow microphone permission for this site in your browser settings, then try again.",
+        "service-not-allowed": "Browser speech recognition is blocked. Enable speech recognition and microphone access in your browser settings, then try again.",
+        "audio-capture": "No working microphone was found. Connect or enable a microphone, then try again.",
+        network: "Speech recognition could not reach the browser speech service. Check your internet connection, then try again.",
+        "no-speech": "No speech was detected. Try again and speak after recording starts.",
+      };
+      setError(messages[event.error] ?? "Voice input stopped unexpectedly. Check microphone access and try again.");
       setIsListening(false);
     };
-    recognition.onend = () => setIsListening(false);
+    recognition.onend = () => {
+      setIsListening(false);
+      onEnd?.();
+    };
     recognitionRef.current = recognition;
     return () => recognition.stop();
-  }, [language, onTranscript]);
+  }, [language, onEnd, onTranscript]);
 
-  const toggleListening = useCallback(() => {
+  const startListening = useCallback(() => {
     const recognition = recognitionRef.current;
-    if (!recognition) return;
+    if (!recognition) {
+      setError(supportMessage);
+      return false;
+    }
     setError(null);
-    if (isListening) {
-      recognition.stop();
-      setIsListening(false);
-    } else {
+    try {
       recognition.start();
       setIsListening(true);
+      return true;
+    } catch {
+      setError("Voice input could not start. Check microphone permission, then try again.");
+      setIsListening(false);
+      return false;
     }
-  }, [isListening]);
+  }, [supportMessage]);
 
-  return { error, isListening, isSupported, toggleListening };
+  const stopListening = useCallback(() => {
+    const recognition = recognitionRef.current;
+    if (recognition) {
+      recognition.stop();
+      setIsListening(false);
+    }
+  }, []);
+
+  const toggleListening = useCallback(() => {
+    if (isListening) stopListening();
+    else startListening();
+  }, [isListening, startListening, stopListening]);
+
+  return { error, isListening, isSupported, startListening, stopListening, supportMessage, toggleListening };
 }

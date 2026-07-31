@@ -32,8 +32,8 @@ export function useDocumentPip() {
     }
 
     const pipWindow = await api.requestWindow({
-      width: 390,
-      height: 620,
+      width: 560,
+      height: 760,
       preferInitialWindowPlacement: true,
     });
 
@@ -42,6 +42,7 @@ export function useDocumentPip() {
     pipWindow.document.documentElement.lang = "en";
     pipWindow.document.documentElement.className = document.documentElement.className;
     pipWindow.document.documentElement.dataset.compact = document.documentElement.dataset.compact ?? "false";
+    pipWindow.document.documentElement.style.cssText = document.documentElement.style.cssText;
     pipWindow.document.body.style.margin = "0";
     pipWindow.document.body.style.minHeight = "100vh";
     copyStylesToPipWindow(document, pipWindow.document);
@@ -54,8 +55,9 @@ export function useDocumentPip() {
     const themeObserver = new MutationObserver(() => {
       pipWindow.document.documentElement.className = document.documentElement.className;
       pipWindow.document.documentElement.dataset.compact = document.documentElement.dataset.compact ?? "false";
+      pipWindow.document.documentElement.style.cssText = document.documentElement.style.cssText;
     });
-    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "data-compact"] });
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "data-compact", "style"] });
 
     const handlePageHide = () => {
       themeObserver.disconnect();

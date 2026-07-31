@@ -2,19 +2,23 @@
 
 import type { UIMessage } from "ai";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
-import { Copy, Download, FilePlus2, Mic, Paperclip, Pencil, RefreshCw, Save, Send, Star, X } from "lucide-react";
+import { Check, Copy, FilePlus2, Mic, Paperclip, Pencil, RefreshCw, Save, Send, Square, Star, X } from "lucide-react";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useProduct, type SavedNote } from "@/components/product/ProductProvider";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 type Props = {
   messages: UIMessage[];
   status: "submitted" | "streaming" | "ready" | "error";
   error?: Error;
-  onSend: (text: string) => void;
+  onSend: (text: string, files?: FileList) => void;
   onClose?: () => void;
   floating: boolean;
 };
+
+const MAX_RECORDING_SECONDS = 300;
+type RecordingPhase = "idle" | "recording" | "paused" | "maximum";
 
 export function messageText(message?: UIMessage) {
   if (!message) return "";
@@ -27,70 +31,151 @@ export function messageText(message?: UIMessage) {
 export function ChatInterface({ messages, status, error, onSend, onClose, floating }: Props) {
   const product = useProduct();
   const [input, setInput] = useState("");
-  const [speechDraft, setSpeechDraft] = useState("");
-  const [copied, setCopied] = useState(false);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [recordingPhase, setRecordingPhase] = useState<RecordingPhase>("idle");
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [customName, setCustomName] = useState("");
+  const [customDescription, setCustomDescription] = useState("");
+  const [attachments, setAttachments] = useState<File[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const speechBaseRef = useRef("");
+  const recordingOriginRef = useRef("");
+  const recordingOffsetRef = useRef(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const latestAssistant = [...messages].reverse().find((message) => message.role === "assistant");
   const latestText = messageText(latestAssistant);
+  const isGenerating = status === "submitted" || status === "streaming";
+  const hasValidInput = input.trim().length > 0 || attachments.length > 0;
+  const canSend = recordingPhase !== "recording" && !isGenerating && hasValidInput;
 
   const handleTranscript = useCallback((text: string) => {
-    setSpeechDraft(text);
-    setInput(text);
+    setInput([speechBaseRef.current, text].filter(Boolean).join(" "));
   }, []);
-  const speech = useSpeechRecognition({ onTranscript: handleTranscript });
+  const handleSpeechEnd = useCallback(() => {
+    setRecordingPhase((phase) => phase === "recording" ? "paused" : phase);
+  }, []);
+  const speech = useSpeechRecognition({ onTranscript: handleTranscript, onEnd: handleSpeechEnd });
+  const stopSpeechListening = speech.stopListening;
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, status]);
 
+  useEffect(() => {
+    if (recordingPhase !== "recording") return;
+    const startedAt = Date.now();
+    const baseSeconds = recordingOffsetRef.current;
+    const timer = window.setInterval(() => {
+      const next = baseSeconds + Math.floor((Date.now() - startedAt) / 1000);
+      setRecordingSeconds(Math.min(next, MAX_RECORDING_SECONDS));
+      if (next >= MAX_RECORDING_SECONDS) {
+        window.clearInterval(timer);
+        setRecordingPhase("maximum");
+        stopSpeechListening();
+      }
+    }, 250);
+    return () => window.clearInterval(timer);
+  }, [recordingPhase, stopSpeechListening]);
+
+  function showSuccess(action: string) {
+    setActionSuccess(action);
+    window.setTimeout(() => setActionSuccess((current) => current === action ? null : current), 2000);
+  }
+
   function submit(event: FormEvent) {
     event.preventDefault();
     const value = input.trim();
-    if (!value || status === "submitted" || status === "streaming") return;
-    onSend(value);
+    if (!canSend) return;
+    const transfer = new DataTransfer();
+    attachments.forEach((file) => transfer.items.add(file));
+    onSend(value, transfer.files.length ? transfer.files : undefined);
     setInput("");
-    setSpeechDraft("");
+    setAttachments([]);
+    setRecordingPhase("idle");
+    setRecordingSeconds(0);
+    recordingOffsetRef.current = 0;
   }
 
   function makeNote(): SavedNote {
     return {
       id: crypto.randomUUID(),
       title: product.template.name,
+      favoriteName: product.template.name,
       preview: latestText,
       modeId: product.mode.id,
       templateId: product.template.id,
       createdAt: new Date().toISOString(),
+      lastUpdated: new Date().toISOString(),
     };
+  }
+
+  function addToFavorites() {
+    const note = makeNote();
+    const favoriteName = window.prompt("Favorite name", note.favoriteName)?.trim();
+    if (!favoriteName) return;
+    product.addFavorite({ ...note, favoriteName });
+    showSuccess("favorite");
   }
 
   async function copyNote() {
     await navigator.clipboard.writeText(latestText);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1500);
+    showSuccess("copy");
   }
 
-  function exportDoc() {
-    const blob = new Blob([`<html><body><h1>${product.template.name}</h1><p>${latestText.replaceAll("\n", "<br>")}</p></body></html>`], { type: "application/msword" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${product.template.id}.doc`;
-    link.click();
-    URL.revokeObjectURL(url);
+  function startRecording() {
+    recordingOriginRef.current = input.trim();
+    speechBaseRef.current = input.trim();
+    setRecordingSeconds(0);
+    recordingOffsetRef.current = 0;
+    setRecordingPhase(speech.startListening() ? "recording" : "idle");
+  }
+
+  function stopRecording() {
+    setRecordingPhase("paused");
+    speech.stopListening();
+  }
+
+  function continueRecording() {
+    speechBaseRef.current = input.trim();
+    recordingOffsetRef.current = recordingSeconds;
+    setRecordingPhase(speech.startListening() ? "recording" : "paused");
+  }
+
+  function cancelRecording() {
+    setRecordingPhase("idle");
+    setRecordingSeconds(0);
+    recordingOffsetRef.current = 0;
+    speech.stopListening();
+    setInput(recordingOriginRef.current);
+  }
+
+  function saveCustomTemplate() {
+    if (!customName.trim()) return;
+    product.saveCustomTemplate({
+      name: customName.trim(),
+      description: customDescription.trim() || "Custom documentation template",
+      content: latestText,
+      modeId: product.mode.id,
+    });
+    setTemplateDialogOpen(false);
+    setCustomName("");
+    setCustomDescription("");
+    showSuccess("template");
   }
 
   return (
     <section
       aria-label="ShiftNote AI Clinical Copilot"
       className={floating
-        ? "flex h-full min-h-[500px] flex-col overflow-hidden bg-[var(--background)] text-[var(--foreground)]"
-        : "flex h-[min(700px,calc(100vh-100px))] w-[min(410px,calc(100vw-24px))] flex-col overflow-hidden rounded-[26px] border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] shadow-[0_28px_80px_rgba(8,35,28,0.24)]"}
+        ? "relative flex h-full min-h-0 flex-col overflow-hidden bg-[var(--background)] text-[var(--foreground)]"
+        : "relative flex h-[min(700px,calc(100vh-100px))] w-[min(410px,calc(100vw-24px))] flex-col overflow-hidden rounded-[26px] border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] shadow-[0_28px_80px_rgba(0,0,0,0.22)]"}
     >
       <header className="border-b border-[var(--border)] bg-[var(--card)] px-4 py-3.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="relative grid size-10 place-items-center rounded-xl bg-[var(--primary)] font-semibold text-white">
-              S<span className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-[var(--card)] bg-emerald-400" />
+              S<span className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-[var(--card)] bg-[var(--primary)]" />
             </div>
             <div>
               <h2 className="text-sm font-semibold">ShiftNote AI Clinical Copilot</h2>
@@ -111,15 +196,8 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
             <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-[var(--primary-soft)] text-2xl text-[var(--primary)]">✦</span>
             <h3 className="mt-4 text-center text-lg font-semibold tracking-tight">Start your {product.template.name}</h3>
             <p className="mx-auto mt-2 max-w-[290px] text-center text-xs leading-5 text-[var(--muted-foreground)]">
-              Choose a professionally structured starting point, then answer a few focused questions.
+              Type or dictate the clinical information you want documented.
             </p>
-            <div className="mt-5 grid gap-2">
-              {product.template.examples.slice(0, 3).map((example) => (
-                <button className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-3 text-left text-xs font-medium transition hover:border-[var(--primary)]/40 hover:bg-[var(--primary-soft)]" key={example.id} onClick={() => onSend(example.starter)}>
-                  {example.title}
-                </button>
-              ))}
-            </div>
           </div>
         ) : (
           <div className="space-y-4">
@@ -145,14 +223,12 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
               <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-2">
                 <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--muted-foreground)]">Note actions</p>
                 <div className="flex flex-wrap gap-1">
-                  <Button onClick={copyNote} size="sm" variant="ghost"><Copy className="size-3.5" />{copied ? "Copied" : "Copy"}</Button>
-                  <Button onClick={() => product.saveToHistory(makeNote())} size="sm" variant="ghost"><Save className="size-3.5" />Save</Button>
-                  <Button onClick={() => product.addFavorite(makeNote())} size="sm" variant="ghost"><Star className="size-3.5" />Favorite</Button>
-                  <Button onClick={() => product.saveCustomTemplate(makeNote())} size="sm" variant="ghost"><FilePlus2 className="size-3.5" />Template</Button>
-                  <Button onClick={() => setInput(`Revise this ${product.template.name}: `)} size="sm" variant="ghost"><Pencil className="size-3.5" />Edit</Button>
-                  <Button onClick={product.regenerate} size="sm" variant="ghost"><RefreshCw className="size-3.5" />Regenerate</Button>
-                  <Button onClick={() => window.print()} size="sm" variant="ghost"><Download className="size-3.5" />PDF</Button>
-                  <Button onClick={exportDoc} size="sm" variant="ghost"><Download className="size-3.5" />DOCX</Button>
+                  <ActionButton active={actionSuccess === "copy"} icon={Copy} label="Copy" successLabel="Copied" onClick={copyNote} />
+                  <ActionButton active={actionSuccess === "save"} icon={Save} label="Save" successLabel="Saved" onClick={() => { product.saveToHistory(makeNote()); showSuccess("save"); }} />
+                  <ActionButton active={actionSuccess === "favorite"} icon={Star} label="Favorite" successLabel="Added to Favorites" onClick={addToFavorites} />
+                  <ActionButton active={actionSuccess === "template"} icon={FilePlus2} label="Template" successLabel="Saved as Template" onClick={() => { setCustomName(product.template.name); setTemplateDialogOpen(true); }} />
+                  <ActionButton active={actionSuccess === "edit"} icon={Pencil} label="Edit" successLabel="Changes Saved" onClick={() => { setInput(`Revise this ${product.template.name}: `); showSuccess("edit"); }} />
+                  <ActionButton active={actionSuccess === "regenerate"} icon={RefreshCw} label="Regenerate" successLabel="Regenerating" onClick={() => { product.regenerate(); showSuccess("regenerate"); }} />
                 </div>
               </div>
             )}
@@ -162,14 +238,51 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
 
       <div className="border-t border-[var(--border)] bg-[var(--card)] p-4">
         {(speech.error || error) && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-[11px] text-red-700 dark:bg-red-950/30 dark:text-red-300">{speech.error ?? error?.message}</p>}
+        {!speech.isSupported && !speech.error && <p className="mb-2 rounded-lg bg-amber-50 px-3 py-2 text-[11px] text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">{speech.supportMessage}</p>}
+        {recordingPhase !== "idle" && (
+          <div className="mb-2 flex flex-wrap items-center gap-3 rounded-xl border border-[var(--primary)]/40 bg-[color-mix(in_srgb,var(--primary)_12%,var(--card))] px-3.5 py-3 text-xs text-[var(--foreground)] shadow-sm">
+            <span className={cn("size-2.5 rounded-full bg-[var(--primary)] ring-4 ring-[var(--primary)]/15", recordingPhase === "recording" && "animate-pulse")} />
+            <div className="min-w-0">
+              <p className="font-semibold">{recordingPhase === "recording" ? "Recording…" : recordingPhase === "paused" ? "Recording stopped" : "Maximum recording length reached"}</p>
+              <p className="mt-0.5 text-[10px] text-[var(--muted-foreground)]">{recordingPhase === "recording" ? "Live transcription is active" : "Edit the transcript or send when ready"}</p>
+            </div>
+            <span className="rounded-lg border border-[var(--primary)]/25 bg-[var(--card)] px-2.5 py-1.5 font-mono text-sm font-semibold tabular-nums text-[var(--primary)]">{Math.floor(recordingSeconds / 60).toString().padStart(2, "0")}:{(recordingSeconds % 60).toString().padStart(2, "0")}</span>
+            <span className="flex-1" />
+            {recordingPhase === "recording" && <>
+              <button className="rounded-lg border border-[var(--primary)]/30 bg-[var(--card)] px-3 py-2 font-semibold text-[var(--primary)] hover:bg-[var(--primary-soft)]" onClick={cancelRecording} type="button">Cancel</button>
+              <button className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--primary)] px-3 py-2 font-semibold text-white shadow-sm hover:brightness-95" onClick={stopRecording} type="button"><Square className="size-3 fill-current" /> Stop</button>
+            </>}
+            {recordingPhase === "paused" && <>
+              <button className="rounded-lg bg-[var(--primary)] px-3 py-2 font-semibold text-white shadow-sm hover:brightness-95" onClick={continueRecording} type="button">Continue</button>
+              <button className="rounded-lg border border-[var(--primary)]/30 bg-[var(--card)] px-3 py-2 font-semibold text-[var(--primary)] hover:bg-[var(--primary-soft)]" onClick={cancelRecording} type="button">Cancel</button>
+            </>}
+            {recordingPhase === "maximum" && <button className="rounded-lg border border-[var(--primary)]/30 bg-[var(--card)] px-3 py-2 font-semibold text-[var(--primary)] hover:bg-[var(--primary-soft)]" onClick={cancelRecording} type="button">Cancel</button>}
+          </div>
+        )}
+        {attachments.length > 0 && <div className="mb-2 flex flex-wrap gap-1.5">{attachments.map((file, index) => <span className="inline-flex max-w-full items-center gap-1.5 rounded-lg bg-[var(--primary-soft)] px-2.5 py-1.5 text-[10px] text-[var(--primary)]" key={`${file.name}-${index}`}><span className="truncate">{file.name}</span><button aria-label={`Remove ${file.name}`} onClick={() => setAttachments((files) => files.filter((_, itemIndex) => itemIndex !== index))} type="button"><X className="size-3" /></button></span>)}</div>}
         <form className="flex items-end gap-1 rounded-2xl border border-[var(--border)] bg-[var(--background)] p-2 focus-within:border-[var(--primary)]" onSubmit={submit}>
-          <button aria-label="Attach file (coming soon)" className="grid size-10 shrink-0 place-items-center rounded-xl text-[var(--muted-foreground)] hover:bg-[var(--muted)]" title="Attachments coming soon" type="button"><Paperclip className="size-[18px]" /></button>
-          <input aria-label="Message ShiftNote" autoComplete="off" className="min-h-10 min-w-0 flex-1 bg-transparent px-1 text-sm outline-none placeholder:text-[var(--muted-foreground)]" onChange={(event) => setInput(event.target.value)} placeholder={speech.isListening ? "Listening…" : "Describe the clinical facts…"} value={speechDraft && speech.isListening ? speechDraft : input} />
-          {speech.isSupported && <button aria-label={speech.isListening ? "Stop voice input" : "Start voice input"} aria-pressed={speech.isListening} className={`grid size-10 shrink-0 place-items-center rounded-xl transition ${speech.isListening ? "animate-pulse bg-red-100 text-red-600" : "text-[var(--muted-foreground)] hover:bg-[var(--muted)]"}`} onClick={speech.toggleListening} type="button"><Mic className="size-[18px]" /></button>}
-          <button aria-label="Send message" className="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--primary)] text-white disabled:opacity-40" disabled={!input.trim() || status === "submitted" || status === "streaming"} type="submit"><Send className="size-4" /></button>
+          <input accept=".pdf,.doc,.docx,.txt,image/*" className="hidden" multiple onChange={(event) => { const next = Array.from(event.target.files ?? []); setAttachments((current) => [...current, ...next]); event.target.value = ""; }} ref={fileInputRef} type="file" />
+          <button aria-label="Attach files" className="grid size-10 shrink-0 place-items-center rounded-xl text-[var(--muted-foreground)] hover:bg-[var(--muted)] disabled:opacity-35" disabled={recordingPhase === "recording"} onClick={() => fileInputRef.current?.click()} type="button"><Paperclip className="size-[18px]" /></button>
+          <input aria-label="Message ShiftNote" autoComplete="off" className="min-h-10 min-w-0 flex-1 bg-transparent px-1 text-sm outline-none placeholder:text-[var(--muted-foreground)]" onChange={(event) => setInput(event.target.value)} placeholder={recordingPhase === "recording" ? "Listening…" : "Describe the clinical facts…"} value={input} />
+          {recordingPhase === "idle" && (speech.isSupported ? <button aria-label="Start voice input" className="grid size-10 shrink-0 place-items-center rounded-xl text-[var(--muted-foreground)] transition hover:bg-[var(--muted)]" onClick={startRecording} type="button"><Mic className="size-[18px]" /></button> : <span className="grid size-10 place-items-center text-[var(--muted-foreground)]" title="Voice input is not supported in this browser"><Mic className="size-[18px] opacity-35" /></span>)}
+          <button aria-label="Send message" className="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--primary)] text-white disabled:opacity-40" disabled={!canSend} type="submit"><Send className="size-4" /></button>
         </form>
         <p className="mt-2 text-center text-[10px] text-[var(--muted-foreground)]">Review and attest every AI-generated note before clinical use.</p>
       </div>
+      {templateDialogOpen && (
+        <div className="absolute inset-0 z-50 grid place-items-center bg-black/35 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 shadow-2xl">
+            <div className="flex items-center justify-between"><h3 className="font-semibold">Save as Template</h3><button aria-label="Close" onClick={() => setTemplateDialogOpen(false)}><X className="size-4" /></button></div>
+            <label className="mt-4 block text-xs text-[var(--muted-foreground)]">Template Name<input className="mt-1.5 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2.5 text-sm outline-none focus:border-[var(--primary)]" onChange={(event) => setCustomName(event.target.value)} value={customName} /></label>
+            <label className="mt-3 block text-xs text-[var(--muted-foreground)]">Description<textarea className="mt-1.5 min-h-20 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2.5 text-sm outline-none focus:border-[var(--primary)]" onChange={(event) => setCustomDescription(event.target.value)} value={customDescription} /></label>
+            <Button className="mt-4 w-full" disabled={!customName.trim()} onClick={saveCustomTemplate}>Save</Button>
+          </div>
+        </div>
+      )}
     </section>
   );
+}
+
+function ActionButton({ active, icon: Icon, label, successLabel, onClick }: { active: boolean; icon: typeof Copy; label: string; successLabel: string; onClick: () => void | Promise<void> }) {
+  return <Button className={active ? "text-[var(--primary)]" : ""} onClick={onClick} size="sm" variant="ghost">{active ? <Check className="size-3.5" /> : <Icon className="size-3.5" />}{active ? successLabel : label}</Button>;
 }

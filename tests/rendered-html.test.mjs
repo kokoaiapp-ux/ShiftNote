@@ -1,19 +1,14 @@
 import assert from "node:assert/strict";
-import { access, readFile, readdir } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const developmentPreviewMeta =
-  /<meta(?=[^>]*\bname=["']codex-preview["'])(?=[^>]*\bcontent=["']development["'])[^>]*>/i;
-const templateRoot = new URL("../", import.meta.url);
-const previewRoot = new URL("../app/_sites-preview/", import.meta.url);
-
-async function render() {
+async function render(pathname = "/copilot") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
-  workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
+  workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}-${pathname}`);
   const { default: worker } = await import(workerUrl.href);
 
   return worker.fetch(
-    new Request("http://localhost/", {
+    new Request(`http://localhost${pathname}`, {
       headers: { accept: "text/html" },
     }),
     {
@@ -28,60 +23,64 @@ async function render() {
   );
 }
 
-test("server-renders the starter loading skeleton", async () => {
+test("server-renders the clinical copilot without chat template shortcuts", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
-  assert.match(html, developmentPreviewMeta);
-  assert.match(html, /<title>Your site is taking shape<\/title>/i);
-  assert.match(html, /Codex is working/);
-  assert.match(html, /Your site is taking shape/);
-  assert.match(html, /Codex is building the first version/);
-  assert.match(html, /react-loading-skeleton/);
-  assert.match(html, /role="status"/);
+  assert.match(html, /ShiftNote AI Clinical Copilot/);
+  assert.match(html, /Current template/i);
+  assert.match(html, /Type or dictate the clinical information you want documented/);
+  assert.match(html, /aria-label="Message ShiftNote"/);
+  assert.match(html, /aria-label="Send message"/);
+  assert.doesNotMatch(html, /aria-label="Choose template"/);
+  assert.doesNotMatch(html, /Initial Documentation|Routine Follow-up|Change in Status/);
 });
 
-test("keeps the loading skeleton scoped and disposable", async () => {
-  const [preview, css, page, layout, packageJson, files] = await Promise.all([
-    readFile(new URL("SkeletonPreview.tsx", previewRoot), "utf8"),
-    readFile(new URL("preview.css", previewRoot), "utf8"),
-    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../package.json", import.meta.url), "utf8"),
-    readdir(previewRoot),
+test("send validity reacts to controlled text and attachments", async () => {
+  const chat = await readFile(
+    new URL("../components/floating-assistant/ChatInterface.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(chat, /const hasValidInput = input\.trim\(\)\.length > 0 \|\| attachments\.length > 0/);
+  assert.match(chat, /const canSend = recordingPhase !== "recording" && !isGenerating && hasValidInput/);
+  assert.match(chat, /disabled=\{!canSend\}/);
+  assert.match(chat, /if \(!canSend\) return/);
+  assert.match(chat, /setInput\(\[speechBaseRef\.current, text\]\.filter\(Boolean\)\.join\(" "\)\)/);
+  assert.doesNotMatch(chat, /onKey(?:Down|Up|Press).*canSend/s);
+});
+
+test("speech recognition inserts transcripts and explains recoverable failures", async () => {
+  const speech = await readFile(
+    new URL("../hooks/useSpeechRecognition.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(speech, /recognition\.interimResults = true/);
+  assert.match(speech, /onTranscript\(segments\.join\(" "\)\.trim\(\)\)/);
+  assert.match(speech, /recognition\.onend/);
+  assert.match(speech, /Microphone access was denied/);
+  assert.match(speech, /No working microphone was found/);
+  assert.match(speech, /secure connection \(HTTPS\) or localhost/);
+  assert.match(speech, /latest Chrome or Edge/);
+});
+
+test("history, favorites, auto-save, manual save, and AI update paths remain wired", async () => {
+  const [provider, workspace, favoriteEditor] = await Promise.all([
+    readFile(new URL("../components/product/ProductProvider.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/product/HistoryWorkspace.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/favorites/[id]/page.tsx", import.meta.url), "utf8"),
   ]);
 
-  assert.deepEqual(files.sort(), ["SkeletonPreview.tsx", "preview.css"]);
-  assert.match(preview, /from "react-loading-skeleton"/);
-  assert.match(preview, /baseColor="#eceae7"/);
-  assert.match(preview, /highlightColor="#f9f8f6"/);
-  assert.match(preview, /duration=\{2\.8\}/);
-  assert.match(preview, /sites-skeleton-search-placeholder/);
-  assert.match(packageJson, /"react-loading-skeleton": "3\.5\.0"/);
-
-  const shellIndex = preview.indexOf('className="sites-skeleton-shell"');
-  const statusIndex = preview.indexOf('className="sites-skeleton-status"');
-  assert.ok(shellIndex >= 0 && statusIndex > shellIndex);
-  assert.match(css, /position:\s*fixed/);
-  assert.match(css, /inset:\s*0/);
-  assert.match(css, /opacity:\s*0\.52/);
-  assert.match(css, /prefers-reduced-motion:\s*reduce/);
-  assert.doesNotMatch(css, /#020617|canvas|pets|progress/i);
-  assert.doesNotMatch(
-    preview,
-    /loading-spinner|status-mark|status-progress|canvas|cookie|random/i,
-  );
-
-  assert.match(page, /export const metadata:\s*Metadata/);
-  assert.match(page, /"codex-preview": "development"/);
-  assert.match(page, /<SkeletonPreview \/>/);
-  assert.match(layout, /title:\s*"Starter Project"/);
-  assert.doesNotMatch(layout, /codex-preview|_sites-preview|themeColor|\bViewport\b/);
-  assert.doesNotMatch(css, /(^|\s)(html|body)\s*\{/m);
-
-  await assert.rejects(
-    access(new URL("public/_sites-preview", templateRoot)),
-  );
+  assert.match(provider, /localStorage\.setItem\("shiftnote-history"/);
+  assert.match(provider, /localStorage\.setItem\("shiftnote-favorites"/);
+  assert.match(provider, /updateHistoryWithAI/);
+  assert.match(provider, /updateFavoriteWithAI/);
+  assert.match(workspace, /"auto-save"/);
+  assert.match(workspace, /"manual"/);
+  assert.match(workspace, /product\.updateHistoryWithAI/);
+  assert.match(favoriteEditor, /product\.updateFavorite/);
+  assert.match(favoriteEditor, /product\.updateFavoriteWithAI/);
 });

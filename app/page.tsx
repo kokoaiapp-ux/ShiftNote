@@ -5,14 +5,12 @@ import { Clock3, FileText, Heart, Sparkles, TimerReset } from "lucide-react";
 import { ProductIcon } from "@/components/product/Icon";
 import { useProduct } from "@/components/product/ProductProvider";
 import { Card, CardContent } from "@/components/ui/card";
-import { templates } from "@/lib/product-data";
-
-const quickIds = ["general-progress-note", "medication-administration", "wound-care", "incident-report", "admission-note", "discharge-summary"];
+import { getQuickActionsForMode } from "@/lib/product-data";
 
 export default function DashboardPage() {
   const router = useRouter();
   const product = useProduct();
-  const quickTemplates = quickIds.map((id) => templates.find((item) => item.id === id)!).filter(Boolean);
+  const quickTemplates = getQuickActionsForMode(product.mode.id);
 
   function openTemplate(id: string) {
     product.setTemplate(id);
@@ -22,12 +20,12 @@ export default function DashboardPage() {
 
   return (
     <>
-      <section className="relative overflow-hidden rounded-[28px] bg-[#163f33] px-7 py-8 text-white shadow-xl shadow-emerald-950/10 md:px-10 md:py-10">
-        <div className="absolute -right-16 -top-24 size-72 rounded-full bg-emerald-300/10 blur-3xl" />
-        <p className="text-sm text-emerald-100/70">Good morning, Maria</p>
+      <section className="relative overflow-hidden rounded-[28px] bg-[var(--primary)] px-7 py-8 text-white shadow-xl md:px-10 md:py-10">
+        <div className="absolute -right-16 -top-24 size-72 rounded-full bg-white/10 blur-3xl" />
+        <p className="text-sm text-white/70">Good morning, Maria</p>
         <h1 className="mt-2 max-w-2xl text-3xl font-semibold tracking-[-0.04em] md:text-4xl">Ready to simplify your documentation?</h1>
-        <p className="mt-3 max-w-xl text-sm leading-6 text-emerald-50/65">Choose a structured workflow or open the copilot and describe the clinical facts in your own words.</p>
-        <button className="mt-7 inline-flex h-11 items-center gap-2 rounded-xl bg-white px-5 text-sm font-semibold text-[#153f33] transition hover:-translate-y-0.5" onClick={() => router.push("/copilot")}>
+        <p className="mt-3 max-w-xl text-sm leading-6 text-white/70">Choose a structured workflow or open the copilot and describe the clinical facts in your own words.</p>
+        <button className="mt-7 inline-flex h-11 items-center gap-2 rounded-xl bg-white px-5 text-sm font-semibold text-[var(--primary)] transition hover:-translate-y-0.5" onClick={() => router.push("/copilot")}>
           <Sparkles className="size-4" /> Open AI Copilot
         </button>
       </section>

@@ -27,7 +27,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <aside className="flex h-full w-64 flex-col border-r border-[var(--border)] bg-[var(--sidebar)] px-4 py-5">
       <div className="flex items-center justify-between px-2">
         <Link className="flex items-center gap-3" href="/">
-          <span className="grid size-10 place-items-center rounded-xl bg-[var(--primary)] text-white shadow-lg shadow-emerald-900/10"><Sparkles className="size-5" /></span>
+          <span className="grid size-10 place-items-center rounded-xl bg-[var(--primary)] text-white shadow-lg"><Sparkles className="size-5" /></span>
           <span><span className="block font-semibold tracking-[-0.02em]">ShiftNote</span><span className="text-[11px] text-[var(--muted-foreground)]">Clinical Copilot</span></span>
         </Link>
         <button className="lg:hidden" onClick={() => setMobileOpen(false)}><X className="size-5" /></button>
