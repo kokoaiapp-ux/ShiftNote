@@ -87,7 +87,7 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
       if (next >= MAX_RECORDING_SECONDS) {
         window.clearInterval(timer);
         setRecordingPhase("maximum");
-        stopSpeechListening();
+        stopSpeechListening("maximum-duration");
       }
     }, 250);
     return () => window.clearInterval(timer);
@@ -149,7 +149,7 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
 
   function stopRecording() {
     setRecordingPhase("paused");
-    speech.stopListening();
+    speech.stopListening("user-stop");
   }
 
   function continueRecording() {
@@ -162,7 +162,7 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
     setRecordingPhase("idle");
     setRecordingSeconds(0);
     recordingOffsetRef.current = 0;
-    speech.stopListening();
+    speech.stopListening("cancel");
     setInput(recordingOriginRef.current);
   }
 

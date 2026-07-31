@@ -76,14 +76,35 @@ test("speech recognition inserts transcripts and explains recoverable failures",
   );
 
   assert.match(speech, /recognition\.interimResults = true/);
+  assert.match(speech, /recognition\.continuous = true/);
+  assert.match(speech, /recognition\.lang = language/);
+  assert.match(speech, /recognition\.maxAlternatives = 1/);
   assert.match(speech, /const transcript = segments\.join\(" "\)\.trim\(\)/);
   assert.match(speech, /transcriptRef\.current = transcript/);
-  assert.match(speech, /if \(transcriptRef\.current\) onTranscript\(transcriptRef\.current\)/);
-  assert.match(speech, /onEnd\?\.\(transcriptRef\.current\)/);
+  assert.match(speech, /if \(transcriptRef\.current\) onTranscriptRef\.current\(transcriptRef\.current\)/);
+  assert.match(speech, /onEndRef\.current\?\.\(transcriptRef\.current\)/);
   assert.match(speech, /console\.info\("SpeechRecognition started"\)/);
   assert.match(speech, /console\.info\("onresult fired"\)/);
   assert.match(speech, /console\.info\("Transcript received:", transcript\)/);
   assert.match(speech, /ended without returning a transcript/);
+  for (const eventName of [
+    "onstart",
+    "onaudiostart",
+    "onsoundstart",
+    "onspeechstart",
+    "onresult",
+    "onnomatch",
+    "onerror",
+    "onspeechend",
+    "onsoundend",
+    "onaudioend",
+    "onend",
+  ]) {
+    assert.match(speech, new RegExp(eventName));
+  }
+  assert.match(speech, /SpeechRecognition event sequence:/);
+  assert.match(speech, /SpeechRecognition stop reason:/);
+  assert.match(speech, /\}, \[language\]\)/);
   assert.match(speech, /recognition\.onend/);
   assert.match(speech, /Microphone access was denied/);
   assert.match(speech, /No working microphone was found/);

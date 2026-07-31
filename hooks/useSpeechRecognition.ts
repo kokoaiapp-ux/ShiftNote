@@ -11,6 +11,10 @@ type Options = {
 export function useSpeechRecognition({ onTranscript, onEnd, language = "en-US" }: Options) {
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const transcriptRef = useRef("");
+  const onTranscriptRef = useRef(onTranscript);
+  const onEndRef = useRef(onEnd);
+  const eventSequenceRef = useRef<string[]>([]);
+  const stopReasonRef = useRef("browser");
   const [isListening, setIsListening] = useState(false);
   const [isSupported] = useState(
     () =>
@@ -23,6 +27,11 @@ export function useSpeechRecognition({ onTranscript, onEnd, language = "en-US" }
     : "Voice input is not supported by this browser. Use the latest Chrome or Edge, then allow microphone access when prompted.";
 
   useEffect(() => {
+    onTranscriptRef.current = onTranscript;
+    onEndRef.current = onEnd;
+  }, [onEnd, onTranscript]);
+
+  useEffect(() => {
     const Recognition = window.SpeechRecognition ?? window.webkitSpeechRecognition;
     if (!Recognition) return;
 
@@ -30,7 +39,29 @@ export function useSpeechRecognition({ onTranscript, onEnd, language = "en-US" }
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = language;
+    recognition.maxAlternatives = 1;
+    console.info("SpeechRecognition initialized:", {
+      constructor: window.SpeechRecognition ? "SpeechRecognition" : "webkitSpeechRecognition",
+      continuous: recognition.continuous,
+      interimResults: recognition.interimResults,
+      lang: recognition.lang,
+      maxAlternatives: recognition.maxAlternatives,
+    });
+
+    const trace = (eventName: string) => {
+      eventSequenceRef.current.push(eventName);
+      console.info(`SpeechRecognition event: ${eventName}`);
+    };
+
+    recognition.onstart = () => {
+      trace("onstart");
+      console.info("SpeechRecognition started");
+    };
+    recognition.onaudiostart = () => trace("onaudiostart");
+    recognition.onsoundstart = () => trace("onsoundstart");
+    recognition.onspeechstart = () => trace("onspeechstart");
     recognition.onresult = (event) => {
+      trace("onresult");
       console.info("onresult fired");
       const segments: string[] = [];
       for (let i = 0; i < event.results.length; i += 1) {
@@ -40,9 +71,19 @@ export function useSpeechRecognition({ onTranscript, onEnd, language = "en-US" }
       if (!transcript) return;
       console.info("Transcript received:", transcript);
       transcriptRef.current = transcript;
-      onTranscript(transcript);
+      onTranscriptRef.current(transcript);
+    };
+    recognition.onnomatch = (event) => {
+      trace("onnomatch");
+      console.warn("SpeechRecognition onnomatch:", event);
     };
     recognition.onerror = (event) => {
+      trace(`onerror:${event.error}`);
+      console.error("SpeechRecognition onerror:", {
+        error: event.error,
+        message: event.message,
+        sequence: [...eventSequenceRef.current],
+      });
       const messages: Record<string, string> = {
         "not-allowed": "Microphone access was denied. Allow microphone permission for this site in your browser settings, then try again.",
         "service-not-allowed": "Browser speech recognition is blocked. Enable speech recognition and microphone access in your browser settings, then try again.",
@@ -53,18 +94,28 @@ export function useSpeechRecognition({ onTranscript, onEnd, language = "en-US" }
       setError(messages[event.error] ?? "Voice input stopped unexpectedly. Check microphone access and try again.");
       setIsListening(false);
     };
+    recognition.onspeechend = () => trace("onspeechend");
+    recognition.onsoundend = () => trace("onsoundend");
+    recognition.onaudioend = () => trace("onaudioend");
     recognition.onend = () => {
+      trace("onend");
+      console.info("SpeechRecognition event sequence:", [...eventSequenceRef.current]);
+      console.info("SpeechRecognition stop reason:", stopReasonRef.current);
       setIsListening(false);
       // Some browsers finish the final recognition result immediately before
       // `end`. Re-emit the last non-empty transcript so a stop event cannot
       // leave the controlled chat input stale.
-      if (transcriptRef.current) onTranscript(transcriptRef.current);
-      else setError("Speech recognition ended without returning a transcript. Confirm microphone access, speak after recording starts, and try again.");
-      onEnd?.(transcriptRef.current);
+      if (transcriptRef.current) onTranscriptRef.current(transcriptRef.current);
+      else setError(`Speech recognition ended without returning a transcript. Event sequence: ${eventSequenceRef.current.join(" → ") || "no events"}.`);
+      onEndRef.current?.(transcriptRef.current);
     };
     recognitionRef.current = recognition;
-    return () => recognition.stop();
-  }, [language, onEnd, onTranscript]);
+    return () => {
+      console.info("SpeechRecognition instance cleanup");
+      recognition.abort();
+      recognitionRef.current = null;
+    };
+  }, [language]);
 
   const startListening = useCallback(() => {
     const recognition = recognitionRef.current;
@@ -74,9 +125,10 @@ export function useSpeechRecognition({ onTranscript, onEnd, language = "en-US" }
     }
     setError(null);
     transcriptRef.current = "";
+    eventSequenceRef.current = [];
+    stopReasonRef.current = "browser";
     try {
       recognition.start();
-      console.info("SpeechRecognition started");
       setIsListening(true);
       return true;
     } catch {
@@ -86,9 +138,11 @@ export function useSpeechRecognition({ onTranscript, onEnd, language = "en-US" }
     }
   }, [supportMessage]);
 
-  const stopListening = useCallback(() => {
+  const stopListening = useCallback((reason = "user-stop") => {
     const recognition = recognitionRef.current;
     if (recognition) {
+      stopReasonRef.current = reason;
+      console.info("SpeechRecognition stop requested:", reason);
       recognition.stop();
       setIsListening(false);
     }
