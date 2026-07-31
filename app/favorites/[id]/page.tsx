@@ -9,7 +9,7 @@ import { useProduct } from "@/components/product/ProductProvider";
 import { Button } from "@/components/ui/button";
 import { StatusMessage } from "@/components/ui/status-message";
 import { Badge } from "@/components/ui/badge";
-import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import { useAudioTranscription } from "@/hooks/useAudioTranscription";
 import { getMode, getTemplate } from "@/lib/product-data";
 
 export default function FavoriteEditorPage() {
@@ -23,7 +23,7 @@ export default function FavoriteEditorPage() {
   const handleTranscript = useCallback((text: string) => {
     setNewInformation([speechBaseRef.current, text].filter(Boolean).join(" "));
   }, []);
-  const speech = useSpeechRecognition({ onTranscript: handleTranscript });
+  const speech = useAudioTranscription({ onTranscript: handleTranscript });
 
   if (!favorite) {
     return <div className="grid min-h-80 place-items-center"><div className="text-center"><h1 className="font-semibold">Favorite not found</h1><Link className="mt-3 inline-block text-sm text-[var(--primary)]" href="/favorites">Back to Favorites</Link></div></div>;
@@ -65,7 +65,7 @@ export default function FavoriteEditorPage() {
             <p className="mt-1 text-xs leading-5 text-[var(--muted-foreground)]">Only this action sends the existing note, new information, mode, and template to the AI.</p>
             <div className="relative mt-4">
               <textarea className="min-h-36 w-full resize-y rounded-xl border border-[var(--border)] bg-[var(--background)] p-3 pr-11 text-sm leading-6 outline-none focus:border-[var(--primary)]" onChange={(event) => setNewInformation(event.target.value)} placeholder="Describe only what changed…" value={newInformation} />
-              {speech.isSupported ? <button aria-label={speech.isListening ? "Stop dictation" : "Start dictation"} className={`absolute bottom-3 right-3 grid size-8 place-items-center rounded-lg ${speech.isListening ? "animate-pulse bg-[var(--primary-soft)] text-[var(--primary)]" : "bg-[var(--muted)] text-[var(--muted-foreground)]"}`} onClick={() => { if (!speech.isListening) speechBaseRef.current = newInformation.trim(); speech.toggleListening(); }}><Mic className="size-4" /></button> : <span className="absolute bottom-3 right-3 text-[var(--muted-foreground)]" title="Voice input is not supported in this browser"><Mic className="size-4 opacity-60" /></span>}
+              {speech.isSupported ? <button aria-label={speech.isListening ? "Stop dictation" : "Start dictation"} className={`absolute bottom-3 right-3 grid size-8 place-items-center rounded-lg ${speech.isListening ? "animate-pulse bg-[var(--primary-soft)] text-[var(--primary)]" : "bg-[var(--muted)] text-[var(--muted-foreground)]"}`} disabled={speech.isTranscribing} onClick={() => { if (!speech.isListening) speechBaseRef.current = newInformation.trim(); void speech.toggleListening(); }}><Mic className="size-4" /></button> : <span className="absolute bottom-3 right-3 text-[var(--muted-foreground)]" title="Voice input is not supported in this browser"><Mic className="size-4 opacity-60" /></span>}
             </div>
             {(error || speech.error) && <StatusMessage className="mt-2" title="Unable to update favorite" variant="error">{error || speech.error}</StatusMessage>}
             <Button className="mt-4 w-full" disabled={!newInformation.trim() || isUpdating} onClick={updateWithAI}><Sparkles className="size-4" />{isUpdating ? "Updating…" : "Update with AI"}</Button>

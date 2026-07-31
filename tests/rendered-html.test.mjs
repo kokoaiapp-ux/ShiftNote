@@ -59,7 +59,7 @@ test("send validity reacts to controlled text and attachments", async () => {
   );
 
   assert.match(chat, /const hasValidInput = input\.trim\(\)\.length > 0 \|\| attachments\.length > 0/);
-  assert.match(chat, /const canSend = recordingPhase !== "recording" && !isGenerating && hasValidInput/);
+  assert.match(chat, /const canSend = !isGenerating && hasValidInput/);
   assert.match(chat, /disabled=\{!canSend\}/);
   assert.match(chat, /if \(!canSend\) return/);
   assert.match(chat, /setInput\(\[speechBaseRef\.current, text\]\.filter\(Boolean\)\.join\(" "\)\)/);
@@ -69,52 +69,30 @@ test("send validity reacts to controlled text and attachments", async () => {
   assert.doesNotMatch(chat, /onKey(?:Down|Up|Press).*canSend/s);
 });
 
-test("speech recognition inserts transcripts and explains recoverable failures", async () => {
-  const speech = await readFile(
-    new URL("../hooks/useSpeechRecognition.ts", import.meta.url),
-    "utf8",
-  );
+test("MediaRecorder audio is uploaded to OpenAI and inserts the returned transcript", async () => {
+  const [recorder, route, chat] = await Promise.all([
+    readFile(new URL("../hooks/useAudioTranscription.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/transcribe/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../components/floating-assistant/ChatInterface.tsx", import.meta.url), "utf8"),
+  ]);
 
-  assert.match(speech, /recognition\.interimResults = true/);
-  assert.match(speech, /recognition\.continuous = true/);
-  assert.match(speech, /recognition\.lang = language/);
-  assert.match(speech, /recognition\.maxAlternatives = 1/);
-  assert.match(speech, /event\.results\.item\?\.\(i\) \?\? event\.results\[i\]/);
-  assert.match(speech, /result\?\.item\?\.\(0\) \?\? result\?\.\[0\]/);
-  assert.match(speech, /for \(let i = event\.resultIndex; i < event\.results\.length/);
-  assert.match(speech, /finalTranscriptRef\.current/);
-  assert.match(speech, /transcriptRef\.current = transcript/);
-  assert.match(speech, /if \(transcriptRef\.current\) \{[\s\S]*onTranscriptRef\.current\(transcriptRef\.current\)/);
-  assert.match(speech, /onEndRef\.current\?\.\(transcriptRef\.current\)/);
-  assert.match(speech, /console\.info\("SpeechRecognition started"\)/);
-  assert.match(speech, /console\.info\("onresult fired"\)/);
-  assert.match(speech, /console\.info\("Transcript received:", transcript\)/);
-  assert.match(speech, /SpeechRecognition result details:/);
-  assert.match(speech, /Microsoft Edge returned speech result events, but they contained no transcript text/);
-  assert.match(speech, /ended without returning a transcript/);
-  for (const eventName of [
-    "onstart",
-    "onaudiostart",
-    "onsoundstart",
-    "onspeechstart",
-    "onresult",
-    "onnomatch",
-    "onerror",
-    "onspeechend",
-    "onsoundend",
-    "onaudioend",
-    "onend",
-  ]) {
-    assert.match(speech, new RegExp(eventName));
-  }
-  assert.match(speech, /SpeechRecognition event sequence:/);
-  assert.match(speech, /SpeechRecognition stop reason:/);
-  assert.match(speech, /\}, \[language\]\)/);
-  assert.match(speech, /recognition\.onend/);
-  assert.match(speech, /Microphone access was denied/);
-  assert.match(speech, /No working microphone was found/);
-  assert.match(speech, /secure connection \(HTTPS\) or localhost/);
-  assert.match(speech, /latest Chrome or Edge/);
+  assert.match(recorder, /navigator\.mediaDevices\.getUserMedia/);
+  assert.match(recorder, /new MediaRecorder/);
+  assert.match(recorder, /formData\.append\("audio"/);
+  assert.match(recorder, /fetch\("\/api\/transcribe"/);
+  assert.match(recorder, /onTranscriptRef\.current\(transcript\)/);
+  assert.match(recorder, /completedSegmentsRef\.current\.push\(segment\)/);
+  assert.match(recorder, /Microphone access was denied/);
+  assert.match(recorder, /requires HTTPS or localhost/);
+  assert.doesNotMatch(recorder, /webkitSpeechRecognition|SpeechRecognition/);
+
+  assert.match(route, /process\.env\.OPENAI_API_KEY/);
+  assert.match(route, /process\.env\.OPENAI_TRANSCRIPTION_MODEL \?\? "gpt-transcribe"/);
+  assert.match(route, /api\.openai\.com\/v1\/audio\/transcriptions/);
+  assert.match(route, /openAIForm\.append\("language", "en"\)/);
+  assert.match(chat, /speech\.startListening\(true\)/);
+  assert.match(chat, /setRecordingPhase\("transcribing"\)/);
+  assert.match(chat, /Transcribing audio/);
 });
 
 test("history, favorites, auto-save, manual save, and AI update paths remain wired", async () => {

@@ -2,8 +2,8 @@
 
 import type { UIMessage } from "ai";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
-import { Check, Copy, FilePlus2, Mic, Paperclip, Pencil, Plus, RefreshCw, Save, Send, Square, Star, X } from "lucide-react";
-import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import { Check, Copy, FilePlus2, LoaderCircle, Mic, Paperclip, Pencil, Plus, RefreshCw, Save, Send, Square, Star, X } from "lucide-react";
+import { useAudioTranscription } from "@/hooks/useAudioTranscription";
 import { useProduct, type SavedNote } from "@/components/product/ProductProvider";
 import { Button } from "@/components/ui/button";
 import { StatusMessage } from "@/components/ui/status-message";
@@ -20,7 +20,7 @@ type Props = {
 };
 
 const MAX_RECORDING_SECONDS = 300;
-type RecordingPhase = "idle" | "recording" | "paused" | "maximum";
+type RecordingPhase = "idle" | "recording" | "paused" | "transcribing";
 
 export function messageText(message?: UIMessage) {
   if (!message) return "";
@@ -50,7 +50,7 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
   const latestText = messageText(latestAssistant);
   const isGenerating = status === "submitted" || status === "streaming";
   const hasValidInput = input.trim().length > 0 || attachments.length > 0;
-  const canSend = recordingPhase !== "recording" && !isGenerating && hasValidInput;
+  const canSend = !isGenerating && hasValidInput;
 
   const handleTranscript = useCallback((text: string) => {
     setInput([speechBaseRef.current, text].filter(Boolean).join(" "));
@@ -59,9 +59,9 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
     if (text) {
       setInput([speechBaseRef.current, text].filter(Boolean).join(" "));
     }
-    setRecordingPhase((phase) => phase === "recording" ? "paused" : phase);
+    setRecordingPhase(text ? "paused" : "idle");
   }, []);
-  const speech = useSpeechRecognition({ onTranscript: handleTranscript, onEnd: handleSpeechEnd });
+  const speech = useAudioTranscription({ onTranscript: handleTranscript, onEnd: handleSpeechEnd });
   const stopSpeechListening = speech.stopListening;
 
   useEffect(() => {
@@ -87,8 +87,8 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
       setRecordingSeconds(Math.min(next, MAX_RECORDING_SECONDS));
       if (next >= MAX_RECORDING_SECONDS) {
         window.clearInterval(timer);
-        setRecordingPhase("maximum");
-        stopSpeechListening("maximum-duration");
+        setRecordingPhase("transcribing");
+        void stopSpeechListening("maximum-duration");
       }
     }, 250);
     return () => window.clearInterval(timer);
@@ -140,30 +140,29 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
     showSuccess("copy");
   }
 
-  function startRecording() {
+  async function startRecording() {
     recordingOriginRef.current = input.trim();
     speechBaseRef.current = input.trim();
     setRecordingSeconds(0);
     recordingOffsetRef.current = 0;
-    setRecordingPhase(speech.startListening() ? "recording" : "idle");
+    setRecordingPhase(await speech.startListening(false) ? "recording" : "idle");
   }
 
-  function stopRecording() {
-    setRecordingPhase("paused");
-    speech.stopListening("user-stop");
+  async function stopRecording() {
+    setRecordingPhase("transcribing");
+    await speech.stopListening("user-stop");
   }
 
-  function continueRecording() {
-    speechBaseRef.current = input.trim();
+  async function continueRecording() {
     recordingOffsetRef.current = recordingSeconds;
-    setRecordingPhase(speech.startListening() ? "recording" : "paused");
+    setRecordingPhase(await speech.startListening(true) ? "recording" : "paused");
   }
 
   function cancelRecording() {
     setRecordingPhase("idle");
     setRecordingSeconds(0);
     recordingOffsetRef.current = 0;
-    speech.stopListening("cancel");
+    speech.cancel();
     setInput(recordingOriginRef.current);
   }
 
@@ -266,8 +265,8 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
           <div className="mb-2 flex flex-wrap items-center gap-3 rounded-xl border border-[var(--primary)]/40 bg-[color-mix(in_srgb,var(--primary)_12%,var(--card))] px-3.5 py-3 text-xs text-[var(--foreground)] shadow-sm">
             <span className={cn("size-2.5 rounded-full bg-[var(--primary)] ring-4 ring-[var(--primary)]/15", recordingPhase === "recording" && "animate-pulse")} />
             <div className="min-w-0">
-              <p className="font-semibold">{recordingPhase === "recording" ? "Recording…" : recordingPhase === "paused" ? "Recording stopped" : "Maximum recording length reached"}</p>
-              <p className="mt-0.5 text-[10px] text-[var(--muted-foreground)]">{recordingPhase === "recording" ? "Live transcription is active" : "Edit the transcript or send when ready"}</p>
+              <p className="font-semibold">{recordingPhase === "recording" ? "Recording…" : recordingPhase === "transcribing" ? "Transcribing audio…" : "Recording stopped"}</p>
+              <p className="mt-0.5 text-[10px] text-[var(--muted-foreground)]">{recordingPhase === "recording" ? "Audio is recorded locally until you stop" : recordingPhase === "transcribing" ? "Uploading securely to OpenAI" : "Edit the transcript or send when ready"}</p>
             </div>
             <span className="rounded-lg border border-[var(--primary)]/25 bg-[var(--card)] px-2.5 py-1.5 font-mono text-sm font-semibold tabular-nums text-[var(--primary)]">{Math.floor(recordingSeconds / 60).toString().padStart(2, "0")}:{(recordingSeconds % 60).toString().padStart(2, "0")}</span>
             <span className="flex-1" />
@@ -279,7 +278,7 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
               <button className="rounded-lg bg-[var(--primary)] px-3 py-2 font-semibold text-white shadow-sm hover:brightness-95" onClick={continueRecording} type="button">Continue</button>
               <button className="rounded-lg border border-[var(--primary)]/30 bg-[var(--card)] px-3 py-2 font-semibold text-[var(--primary)] hover:bg-[var(--primary-soft)]" onClick={cancelRecording} type="button">Cancel</button>
             </>}
-            {recordingPhase === "maximum" && <button className="rounded-lg border border-[var(--primary)]/30 bg-[var(--card)] px-3 py-2 font-semibold text-[var(--primary)] hover:bg-[var(--primary-soft)]" onClick={cancelRecording} type="button">Cancel</button>}
+            {recordingPhase === "transcribing" && <><LoaderCircle className="size-4 animate-spin text-[var(--primary)]" /><button className="rounded-lg border border-[var(--primary)]/30 bg-[var(--card)] px-3 py-2 font-semibold text-[var(--primary)] hover:bg-[var(--primary-soft)]" onClick={cancelRecording} type="button">Cancel</button></>}
           </div>
         )}
         {attachments.length > 0 && <div className="mb-2 flex flex-wrap gap-1.5">{attachments.map((file, index) => <span className="inline-flex max-w-full items-center gap-1.5 rounded-lg bg-[var(--primary-soft)] px-2.5 py-1.5 text-[10px] text-[var(--primary)]" key={`${file.name}-${index}`}><span className="truncate">{file.name}</span><button aria-label={`Remove ${file.name}`} onClick={() => setAttachments((files) => files.filter((_, itemIndex) => itemIndex !== index))} type="button"><X className="size-3" /></button></span>)}</div>}
@@ -287,7 +286,7 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
           <input accept=".pdf,.doc,.docx,.txt,image/*" className="hidden" multiple onChange={(event) => { const next = Array.from(event.target.files ?? []); setAttachments((current) => [...current, ...next]); event.target.value = ""; }} ref={fileInputRef} type="file" />
           <button aria-label="Attach files" className="grid size-10 shrink-0 place-items-center rounded-xl text-[var(--muted-foreground)] hover:bg-[var(--muted)] disabled:opacity-[0.6]" disabled={recordingPhase === "recording"} onClick={() => fileInputRef.current?.click()} type="button"><Paperclip className="size-[18px]" /></button>
           <button aria-label="Select template" className="grid size-10 shrink-0 place-items-center rounded-xl text-[var(--muted-foreground)] hover:bg-[var(--primary-soft)] hover:text-[var(--primary)] disabled:opacity-[0.6]" disabled={recordingPhase === "recording"} onClick={() => setTemplatePickerOpen(true)} type="button"><Plus className="size-[18px]" /></button>
-          <input aria-label="Message ShiftNote" autoComplete="off" className="min-h-10 min-w-0 flex-1 bg-transparent px-1 text-sm outline-none placeholder:text-[var(--muted-foreground)]" onChange={(event) => setInput(event.target.value)} placeholder={recordingPhase === "recording" ? "Listening…" : "Describe the clinical facts…"} value={input} />
+          <input aria-label="Message ShiftNote" autoComplete="off" className="min-h-10 min-w-0 flex-1 bg-transparent px-1 text-sm outline-none placeholder:text-[var(--muted-foreground)]" onChange={(event) => setInput(event.target.value)} placeholder={recordingPhase === "recording" ? "Recording…" : recordingPhase === "transcribing" ? "Transcribing…" : "Describe the clinical facts…"} value={input} />
           {recordingPhase === "idle" && (speech.isSupported ? <button aria-label="Start voice input" className="grid size-10 shrink-0 place-items-center rounded-xl text-[var(--muted-foreground)] transition hover:bg-[var(--muted)]" onClick={startRecording} type="button"><Mic className="size-[18px]" /></button> : <span className="grid size-10 place-items-center text-[var(--muted-foreground)]" title="Voice input is not supported in this browser"><Mic className="size-[18px] opacity-60" /></span>)}
           <button aria-label="Send message" className="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--primary)] text-white disabled:opacity-[0.65]" disabled={!canSend} type="submit"><Send className="size-4" /></button>
         </form>

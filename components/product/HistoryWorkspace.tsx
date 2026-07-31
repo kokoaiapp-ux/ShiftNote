@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useProduct, type SavedNote, type StoredAttachment } from "./ProductProvider";
 import { Button } from "@/components/ui/button";
 import { StatusMessage } from "@/components/ui/status-message";
-import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import { useAudioTranscription } from "@/hooks/useAudioTranscription";
 import { getMode, getTemplate } from "@/lib/product-data";
 
 export function HistoryWorkspace({ noteId, compact = false, onDeleted }: { noteId: string; compact?: boolean; onDeleted?: () => void }) {
@@ -36,7 +36,7 @@ export function HistoryWorkspace({ noteId, compact = false, onDeleted }: { noteI
       setSaveStatus("saved");
     }, 1200);
   }, [noteId, updateHistoryNote]);
-  const speech = useSpeechRecognition({ onTranscript: handleTranscript });
+  const speech = useAudioTranscription({ onTranscript: handleTranscript });
 
   const flushPending = useCallback(() => {
     if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
@@ -157,14 +157,14 @@ export function HistoryWorkspace({ noteId, compact = false, onDeleted }: { noteI
           <p className="mt-1 text-[11px] leading-4 text-[var(--muted-foreground)]">Add only the new information. Existing sections are preserved unless affected.</p>
           <textarea className="mt-3 min-h-28 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] p-3 text-xs leading-5 outline-none focus:border-[var(--primary)]" onChange={(event) => { setNewInformation(event.target.value); scheduleSave({ pendingInformation: event.target.value }); }} placeholder="Type or dictate additional information…" value={newInformation} />
           <div className="mt-2 flex gap-2">
-            <Button onClick={() => {
-              if (speech.isListening) speech.stopListening();
-              else { voiceBaseRef.current = newInformation.trim(); setVoiceStarted(true); speech.startListening(); }
-            }} size="sm" variant={speech.isListening ? "default" : "outline"}><Mic className="size-3.5" />{speech.isListening ? "Stop" : voiceStarted ? "Continue" : "Voice"}</Button>
-            {voiceStarted && <Button onClick={() => { speech.stopListening(); setNewInformation(voiceBaseRef.current); setVoiceStarted(false); }} size="sm" variant="ghost">Cancel</Button>}
+            <Button disabled={speech.isTranscribing} onClick={() => {
+              if (speech.isListening) void speech.stopListening();
+              else { voiceBaseRef.current = newInformation.trim(); setVoiceStarted(true); void speech.startListening(voiceStarted); }
+            }} size="sm" variant={speech.isListening ? "default" : "outline"}><Mic className="size-3.5" />{speech.isTranscribing ? "Transcribing…" : speech.isListening ? "Stop" : voiceStarted ? "Continue" : "Voice"}</Button>
+            {voiceStarted && <Button onClick={() => { speech.cancel(); setNewInformation(voiceBaseRef.current); setVoiceStarted(false); }} size="sm" variant="ghost">Cancel</Button>}
           </div>
           {(error || speech.error) && <StatusMessage className="mt-2" title="Unable to update note" variant="error">{error || speech.error}</StatusMessage>}
-          <Button className="mt-3 w-full" disabled={!newInformation.trim() || isUpdating || speech.isListening} onClick={updateWithAI}><Sparkles className="size-4" />{isUpdating ? "Updating…" : "Update with AI"}</Button>
+          <Button className="mt-3 w-full" disabled={!newInformation.trim() || isUpdating || speech.isListening || speech.isTranscribing} onClick={updateWithAI}><Sparkles className="size-4" />{isUpdating ? "Updating…" : "Update with AI"}</Button>
         </section>
         <section className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4">
           <h3 className="text-sm font-semibold">Version History</h3>
