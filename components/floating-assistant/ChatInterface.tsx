@@ -2,10 +2,11 @@
 
 import type { UIMessage } from "ai";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
-import { Check, Copy, FilePlus2, Mic, Paperclip, Pencil, RefreshCw, Save, Send, Square, Star, X } from "lucide-react";
+import { Check, Copy, FilePlus2, Mic, Paperclip, Pencil, Plus, RefreshCw, Save, Send, Square, Star, X } from "lucide-react";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useProduct, type SavedNote } from "@/components/product/ProductProvider";
 import { Button } from "@/components/ui/button";
+import { CUSTOM_TEMPLATE_ID, getTemplatesForMode } from "@/lib/product-data";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -38,6 +39,7 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
   const [customName, setCustomName] = useState("");
   const [customDescription, setCustomDescription] = useState("");
   const [attachments, setAttachments] = useState<File[]>([]);
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const speechBaseRef = useRef("");
   const recordingOriginRef = useRef("");
@@ -167,6 +169,12 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
     showSuccess("template");
   }
 
+  function selectTemplate(templateId: string) {
+    product.setTemplate(templateId);
+    product.clearChat();
+    setTemplatePickerOpen(false);
+  }
+
   return (
     <section
       aria-label="ShiftNote AI Clinical Copilot"
@@ -266,6 +274,7 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
         <form className="flex items-end gap-1 rounded-2xl border border-[var(--border)] bg-[var(--background)] p-2 focus-within:border-[var(--primary)]" onSubmit={submit}>
           <input accept=".pdf,.doc,.docx,.txt,image/*" className="hidden" multiple onChange={(event) => { const next = Array.from(event.target.files ?? []); setAttachments((current) => [...current, ...next]); event.target.value = ""; }} ref={fileInputRef} type="file" />
           <button aria-label="Attach files" className="grid size-10 shrink-0 place-items-center rounded-xl text-[var(--muted-foreground)] hover:bg-[var(--muted)] disabled:opacity-35" disabled={recordingPhase === "recording"} onClick={() => fileInputRef.current?.click()} type="button"><Paperclip className="size-[18px]" /></button>
+          <button aria-label="Select template" className="grid size-10 shrink-0 place-items-center rounded-xl text-[var(--muted-foreground)] hover:bg-[var(--primary-soft)] hover:text-[var(--primary)] disabled:opacity-35" disabled={recordingPhase === "recording"} onClick={() => setTemplatePickerOpen(true)} type="button"><Plus className="size-[18px]" /></button>
           <input aria-label="Message ShiftNote" autoComplete="off" className="min-h-10 min-w-0 flex-1 bg-transparent px-1 text-sm outline-none placeholder:text-[var(--muted-foreground)]" onChange={(event) => setInput(event.target.value)} placeholder={recordingPhase === "recording" ? "Listening…" : "Describe the clinical facts…"} value={input} />
           {recordingPhase === "idle" && (speech.isSupported ? <button aria-label="Start voice input" className="grid size-10 shrink-0 place-items-center rounded-xl text-[var(--muted-foreground)] transition hover:bg-[var(--muted)]" onClick={startRecording} type="button"><Mic className="size-[18px]" /></button> : <span className="grid size-10 place-items-center text-[var(--muted-foreground)]" title="Voice input is not supported in this browser"><Mic className="size-[18px] opacity-35" /></span>)}
           <button aria-label="Send message" className="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--primary)] text-white disabled:opacity-40" disabled={!canSend} type="submit"><Send className="size-4" /></button>
@@ -279,6 +288,27 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
             <label className="mt-4 block text-xs text-[var(--muted-foreground)]">Template Name<input className="mt-1.5 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2.5 text-sm outline-none focus:border-[var(--primary)]" onChange={(event) => setCustomName(event.target.value)} value={customName} /></label>
             <label className="mt-3 block text-xs text-[var(--muted-foreground)]">Description<textarea className="mt-1.5 min-h-20 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2.5 text-sm outline-none focus:border-[var(--primary)]" onChange={(event) => setCustomDescription(event.target.value)} value={customDescription} /></label>
             <Button className="mt-4 w-full" disabled={!customName.trim()} onClick={saveCustomTemplate}>Save</Button>
+          </div>
+        </div>
+      )}
+      {templatePickerOpen && (
+        <div className="absolute inset-0 z-50 grid place-items-center bg-black/35 p-4 backdrop-blur-sm">
+          <div className="max-h-[80%] w-full max-w-sm overflow-y-auto rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <div><p className="text-[10px] text-[var(--muted-foreground)]">Current Mode</p><h3 className="text-sm font-semibold">{product.mode.name}</h3></div>
+              <button aria-label="Close template picker" onClick={() => setTemplatePickerOpen(false)} type="button"><X className="size-4" /></button>
+            </div>
+            <div className="mt-4 space-y-1.5">
+              {getTemplatesForMode(product.mode.id).map((template) => (
+                <button className={`flex w-full items-center justify-between rounded-xl border p-3 text-left text-xs ${product.template.id === template.id ? "border-[var(--primary)] bg-[var(--primary-soft)] text-[var(--primary)]" : "border-[var(--border)] hover:bg-[var(--muted)]"}`} key={template.id} onClick={() => selectTemplate(template.id)} type="button">
+                  <span className="font-medium">{template.name}</span>
+                  {product.template.id === template.id && <Check className="size-4" />}
+                </button>
+              ))}
+              <button className={`flex w-full items-center justify-between rounded-xl border border-dashed p-3 text-left text-xs ${product.template.id === CUSTOM_TEMPLATE_ID ? "border-[var(--primary)] bg-[var(--primary-soft)] text-[var(--primary)]" : "border-[var(--border)] hover:bg-[var(--muted)]"}`} onClick={() => selectTemplate(CUSTOM_TEMPLATE_ID)} type="button">
+                <span className="font-medium">Custom Template</span><Plus className="size-4" />
+              </button>
+            </div>
           </div>
         </div>
       )}

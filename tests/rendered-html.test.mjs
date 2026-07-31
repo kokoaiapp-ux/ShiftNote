@@ -23,7 +23,7 @@ async function render(pathname = "/copilot") {
   );
 }
 
-test("server-renders the clinical copilot without chat template shortcuts", async () => {
+test("server-renders the clinical copilot with the compact template switcher", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
@@ -34,8 +34,22 @@ test("server-renders the clinical copilot without chat template shortcuts", asyn
   assert.match(html, /Type or dictate the clinical information you want documented/);
   assert.match(html, /aria-label="Message ShiftNote"/);
   assert.match(html, /aria-label="Send message"/);
-  assert.doesNotMatch(html, /aria-label="Choose template"/);
+  assert.match(html, /aria-label="Select template"/);
   assert.doesNotMatch(html, /Initial Documentation|Routine Follow-up|Change in Status/);
+});
+
+test("template switcher is mode-scoped and clears chat without navigation", async () => {
+  const chat = await readFile(
+    new URL("../components/floating-assistant/ChatInterface.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(chat, /getTemplatesForMode\(product\.mode\.id\)\.map/);
+  assert.match(chat, /selectTemplate\(CUSTOM_TEMPLATE_ID\)/);
+  assert.match(chat, /product\.setTemplate\(templateId\)/);
+  assert.match(chat, /product\.clearChat\(\)/);
+  assert.match(chat, /setTemplatePickerOpen\(false\)/);
+  assert.doesNotMatch(chat, /selectTemplate[\s\S]*router\.(?:push|replace)/);
 });
 
 test("send validity reacts to controlled text and attachments", async () => {
