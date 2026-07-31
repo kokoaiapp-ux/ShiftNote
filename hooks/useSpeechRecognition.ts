@@ -11,6 +11,7 @@ type Options = {
 export function useSpeechRecognition({ onTranscript, onEnd, language = "en-US" }: Options) {
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const transcriptRef = useRef("");
+  const finalTranscriptRef = useRef("");
   const onTranscriptRef = useRef(onTranscript);
   const onEndRef = useRef(onEnd);
   const eventSequenceRef = useRef<string[]>([]);
@@ -63,12 +64,33 @@ export function useSpeechRecognition({ onTranscript, onEnd, language = "en-US" }
     recognition.onresult = (event) => {
       trace("onresult");
       console.info("onresult fired");
-      const segments: string[] = [];
-      for (let i = 0; i < event.results.length; i += 1) {
-        segments.push(event.results[i][0].transcript);
+      const finalSegments: string[] = [];
+      const interimSegments: string[] = [];
+      const resultDetails: Array<{ index: number; isFinal: boolean; transcript: string }> = [];
+
+      for (let i = event.resultIndex; i < event.results.length; i += 1) {
+        const result = event.results.item?.(i) ?? event.results[i];
+        const alternative = result?.item?.(0) ?? result?.[0];
+        const segment = alternative?.transcript?.trim() ?? "";
+        resultDetails.push({ index: i, isFinal: Boolean(result?.isFinal), transcript: segment });
+        if (!segment) continue;
+        if (result.isFinal) finalSegments.push(segment);
+        else interimSegments.push(segment);
       }
-      const transcript = segments.join(" ").trim();
-      if (!transcript) return;
+
+      if (finalSegments.length) {
+        finalTranscriptRef.current = [finalTranscriptRef.current, ...finalSegments].filter(Boolean).join(" ").trim();
+      }
+      const transcript = [finalTranscriptRef.current, ...interimSegments].filter(Boolean).join(" ").trim();
+      console.info("SpeechRecognition result details:", {
+        resultIndex: event.resultIndex,
+        resultsLength: event.results.length,
+        results: resultDetails,
+      });
+      if (!transcript) {
+        console.warn("SpeechRecognition onresult contained no transcript text.");
+        return;
+      }
       console.info("Transcript received:", transcript);
       transcriptRef.current = transcript;
       onTranscriptRef.current(transcript);
@@ -105,8 +127,13 @@ export function useSpeechRecognition({ onTranscript, onEnd, language = "en-US" }
       // Some browsers finish the final recognition result immediately before
       // `end`. Re-emit the last non-empty transcript so a stop event cannot
       // leave the controlled chat input stale.
-      if (transcriptRef.current) onTranscriptRef.current(transcriptRef.current);
-      else setError(`Speech recognition ended without returning a transcript. Confirm microphone access, speak after recording starts, and try again. Event sequence: ${eventSequenceRef.current.join(" → ") || "no events"}.`);
+      if (transcriptRef.current) {
+        onTranscriptRef.current(transcriptRef.current);
+      } else if (eventSequenceRef.current.includes("onresult")) {
+        setError(`Microsoft Edge returned speech result events, but they contained no transcript text. This is not a microphone-permission failure. Event sequence: ${eventSequenceRef.current.join(" → ")}.`);
+      } else {
+        setError(`Speech recognition ended without returning a transcript. Confirm microphone access, speak after recording starts, and try again. Event sequence: ${eventSequenceRef.current.join(" → ") || "no events"}.`);
+      }
       onEndRef.current?.(transcriptRef.current);
     };
     recognitionRef.current = recognition;
@@ -125,6 +152,7 @@ export function useSpeechRecognition({ onTranscript, onEnd, language = "en-US" }
     }
     setError(null);
     transcriptRef.current = "";
+    finalTranscriptRef.current = "";
     eventSequenceRef.current = [];
     stopReasonRef.current = "browser";
     try {

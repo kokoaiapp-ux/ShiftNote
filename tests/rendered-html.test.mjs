@@ -79,13 +79,18 @@ test("speech recognition inserts transcripts and explains recoverable failures",
   assert.match(speech, /recognition\.continuous = true/);
   assert.match(speech, /recognition\.lang = language/);
   assert.match(speech, /recognition\.maxAlternatives = 1/);
-  assert.match(speech, /const transcript = segments\.join\(" "\)\.trim\(\)/);
+  assert.match(speech, /event\.results\.item\?\.\(i\) \?\? event\.results\[i\]/);
+  assert.match(speech, /result\?\.item\?\.\(0\) \?\? result\?\.\[0\]/);
+  assert.match(speech, /for \(let i = event\.resultIndex; i < event\.results\.length/);
+  assert.match(speech, /finalTranscriptRef\.current/);
   assert.match(speech, /transcriptRef\.current = transcript/);
-  assert.match(speech, /if \(transcriptRef\.current\) onTranscriptRef\.current\(transcriptRef\.current\)/);
+  assert.match(speech, /if \(transcriptRef\.current\) \{[\s\S]*onTranscriptRef\.current\(transcriptRef\.current\)/);
   assert.match(speech, /onEndRef\.current\?\.\(transcriptRef\.current\)/);
   assert.match(speech, /console\.info\("SpeechRecognition started"\)/);
   assert.match(speech, /console\.info\("onresult fired"\)/);
   assert.match(speech, /console\.info\("Transcript received:", transcript\)/);
+  assert.match(speech, /SpeechRecognition result details:/);
+  assert.match(speech, /Microsoft Edge returned speech result events, but they contained no transcript text/);
   assert.match(speech, /ended without returning a transcript/);
   for (const eventName of [
     "onstart",
