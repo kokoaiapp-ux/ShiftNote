@@ -106,7 +106,7 @@ export function useSpeechRecognition({ onTranscript, onEnd, language = "en-US" }
       // `end`. Re-emit the last non-empty transcript so a stop event cannot
       // leave the controlled chat input stale.
       if (transcriptRef.current) onTranscriptRef.current(transcriptRef.current);
-      else setError(`Speech recognition ended without returning a transcript. Event sequence: ${eventSequenceRef.current.join(" → ") || "no events"}.`);
+      else setError(`Speech recognition ended without returning a transcript. Confirm microphone access, speak after recording starts, and try again. Event sequence: ${eventSequenceRef.current.join(" → ") || "no events"}.`);
       onEndRef.current?.(transcriptRef.current);
     };
     recognitionRef.current = recognition;

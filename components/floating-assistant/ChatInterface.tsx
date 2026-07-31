@@ -6,6 +6,7 @@ import { Check, Copy, FilePlus2, Mic, Paperclip, Pencil, Plus, RefreshCw, Save, 
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useProduct, type SavedNote } from "@/components/product/ProductProvider";
 import { Button } from "@/components/ui/button";
+import { StatusMessage } from "@/components/ui/status-message";
 import { CUSTOM_TEMPLATE_ID, getTemplatesForMode } from "@/lib/product-data";
 import { cn } from "@/lib/utils";
 
@@ -259,8 +260,8 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
       </div>
 
       <div className="border-t border-[var(--border)] bg-[var(--card)] p-4">
-        {(speech.error || error) && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-[11px] text-red-700 dark:bg-red-950/30 dark:text-red-300">{speech.error ?? error?.message}</p>}
-        {!speech.isSupported && !speech.error && <p className="mb-2 rounded-lg bg-amber-50 px-3 py-2 text-[11px] text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">{speech.supportMessage}</p>}
+        {(speech.error || error) && <StatusMessage className="mb-2" title="Unable to use voice input" variant="error">{speech.error ?? error?.message}</StatusMessage>}
+        {!speech.isSupported && !speech.error && <StatusMessage className="mb-2" title="Voice input unavailable" variant="warning">{speech.supportMessage}</StatusMessage>}
         {recordingPhase !== "idle" && (
           <div className="mb-2 flex flex-wrap items-center gap-3 rounded-xl border border-[var(--primary)]/40 bg-[color-mix(in_srgb,var(--primary)_12%,var(--card))] px-3.5 py-3 text-xs text-[var(--foreground)] shadow-sm">
             <span className={cn("size-2.5 rounded-full bg-[var(--primary)] ring-4 ring-[var(--primary)]/15", recordingPhase === "recording" && "animate-pulse")} />
@@ -284,11 +285,11 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
         {attachments.length > 0 && <div className="mb-2 flex flex-wrap gap-1.5">{attachments.map((file, index) => <span className="inline-flex max-w-full items-center gap-1.5 rounded-lg bg-[var(--primary-soft)] px-2.5 py-1.5 text-[10px] text-[var(--primary)]" key={`${file.name}-${index}`}><span className="truncate">{file.name}</span><button aria-label={`Remove ${file.name}`} onClick={() => setAttachments((files) => files.filter((_, itemIndex) => itemIndex !== index))} type="button"><X className="size-3" /></button></span>)}</div>}
         <form className="flex items-end gap-1 rounded-2xl border border-[var(--border)] bg-[var(--background)] p-2 focus-within:border-[var(--primary)]" onSubmit={submit}>
           <input accept=".pdf,.doc,.docx,.txt,image/*" className="hidden" multiple onChange={(event) => { const next = Array.from(event.target.files ?? []); setAttachments((current) => [...current, ...next]); event.target.value = ""; }} ref={fileInputRef} type="file" />
-          <button aria-label="Attach files" className="grid size-10 shrink-0 place-items-center rounded-xl text-[var(--muted-foreground)] hover:bg-[var(--muted)] disabled:opacity-35" disabled={recordingPhase === "recording"} onClick={() => fileInputRef.current?.click()} type="button"><Paperclip className="size-[18px]" /></button>
-          <button aria-label="Select template" className="grid size-10 shrink-0 place-items-center rounded-xl text-[var(--muted-foreground)] hover:bg-[var(--primary-soft)] hover:text-[var(--primary)] disabled:opacity-35" disabled={recordingPhase === "recording"} onClick={() => setTemplatePickerOpen(true)} type="button"><Plus className="size-[18px]" /></button>
+          <button aria-label="Attach files" className="grid size-10 shrink-0 place-items-center rounded-xl text-[var(--muted-foreground)] hover:bg-[var(--muted)] disabled:opacity-[0.6]" disabled={recordingPhase === "recording"} onClick={() => fileInputRef.current?.click()} type="button"><Paperclip className="size-[18px]" /></button>
+          <button aria-label="Select template" className="grid size-10 shrink-0 place-items-center rounded-xl text-[var(--muted-foreground)] hover:bg-[var(--primary-soft)] hover:text-[var(--primary)] disabled:opacity-[0.6]" disabled={recordingPhase === "recording"} onClick={() => setTemplatePickerOpen(true)} type="button"><Plus className="size-[18px]" /></button>
           <input aria-label="Message ShiftNote" autoComplete="off" className="min-h-10 min-w-0 flex-1 bg-transparent px-1 text-sm outline-none placeholder:text-[var(--muted-foreground)]" onChange={(event) => setInput(event.target.value)} placeholder={recordingPhase === "recording" ? "Listening…" : "Describe the clinical facts…"} value={input} />
-          {recordingPhase === "idle" && (speech.isSupported ? <button aria-label="Start voice input" className="grid size-10 shrink-0 place-items-center rounded-xl text-[var(--muted-foreground)] transition hover:bg-[var(--muted)]" onClick={startRecording} type="button"><Mic className="size-[18px]" /></button> : <span className="grid size-10 place-items-center text-[var(--muted-foreground)]" title="Voice input is not supported in this browser"><Mic className="size-[18px] opacity-35" /></span>)}
-          <button aria-label="Send message" className="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--primary)] text-white disabled:opacity-40" disabled={!canSend} type="submit"><Send className="size-4" /></button>
+          {recordingPhase === "idle" && (speech.isSupported ? <button aria-label="Start voice input" className="grid size-10 shrink-0 place-items-center rounded-xl text-[var(--muted-foreground)] transition hover:bg-[var(--muted)]" onClick={startRecording} type="button"><Mic className="size-[18px]" /></button> : <span className="grid size-10 place-items-center text-[var(--muted-foreground)]" title="Voice input is not supported in this browser"><Mic className="size-[18px] opacity-60" /></span>)}
+          <button aria-label="Send message" className="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--primary)] text-white disabled:opacity-[0.65]" disabled={!canSend} type="submit"><Send className="size-4" /></button>
         </form>
         <p className="mt-2 text-center text-[10px] text-[var(--muted-foreground)]">Review and attest every AI-generated note before clinical use.</p>
       </div>

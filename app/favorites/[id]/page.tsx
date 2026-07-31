@@ -7,6 +7,7 @@ import { useCallback, useRef, useState } from "react";
 import { PageHeader } from "@/components/product/PageHeader";
 import { useProduct } from "@/components/product/ProductProvider";
 import { Button } from "@/components/ui/button";
+import { StatusMessage } from "@/components/ui/status-message";
 import { Badge } from "@/components/ui/badge";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { getMode, getTemplate } from "@/lib/product-data";
@@ -50,7 +51,7 @@ export default function FavoriteEditorPage() {
         <section className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5">
           <label className="text-xs font-medium text-[var(--muted-foreground)]" htmlFor="favorite-name">Favorite name</label>
           <input className="mt-2 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-sm font-semibold outline-none focus:border-[var(--primary)]" id="favorite-name" onChange={(event) => product.updateFavorite(favorite.id, { favoriteName: event.target.value })} value={favorite.favoriteName || favorite.title} />
-          <div className="mt-5 flex items-center justify-between"><label className="text-xs font-medium text-[var(--muted-foreground)]" htmlFor="favorite-note">Saved note</label><span className="flex items-center gap-1 text-[11px] text-[var(--muted-foreground)]"><Save className="size-3" /> Auto-saved</span></div>
+          <div className="mt-5 flex items-center justify-between"><label className="text-xs font-medium text-[var(--muted-foreground)]" htmlFor="favorite-note">Saved note</label><span aria-live="polite" className="flex items-center gap-1 text-[11px] font-medium text-[var(--foreground)]"><Save className="size-3" /> Auto-saved</span></div>
           <textarea className="mt-2 min-h-[480px] w-full resize-y rounded-xl border border-[var(--border)] bg-[var(--background)] p-4 text-sm leading-7 outline-none focus:border-[var(--primary)]" id="favorite-note" onChange={(event) => product.updateFavorite(favorite.id, { preview: event.target.value })} value={favorite.preview} />
         </section>
         <aside className="space-y-4">
@@ -64,9 +65,9 @@ export default function FavoriteEditorPage() {
             <p className="mt-1 text-xs leading-5 text-[var(--muted-foreground)]">Only this action sends the existing note, new information, mode, and template to the AI.</p>
             <div className="relative mt-4">
               <textarea className="min-h-36 w-full resize-y rounded-xl border border-[var(--border)] bg-[var(--background)] p-3 pr-11 text-sm leading-6 outline-none focus:border-[var(--primary)]" onChange={(event) => setNewInformation(event.target.value)} placeholder="Describe only what changed…" value={newInformation} />
-              {speech.isSupported ? <button aria-label={speech.isListening ? "Stop dictation" : "Start dictation"} className={`absolute bottom-3 right-3 grid size-8 place-items-center rounded-lg ${speech.isListening ? "animate-pulse bg-[var(--primary-soft)] text-[var(--primary)]" : "bg-[var(--muted)] text-[var(--muted-foreground)]"}`} onClick={() => { if (!speech.isListening) speechBaseRef.current = newInformation.trim(); speech.toggleListening(); }}><Mic className="size-4" /></button> : <span className="absolute bottom-3 right-3 text-[var(--muted-foreground)]" title="Voice input is not supported in this browser"><Mic className="size-4 opacity-35" /></span>}
+              {speech.isSupported ? <button aria-label={speech.isListening ? "Stop dictation" : "Start dictation"} className={`absolute bottom-3 right-3 grid size-8 place-items-center rounded-lg ${speech.isListening ? "animate-pulse bg-[var(--primary-soft)] text-[var(--primary)]" : "bg-[var(--muted)] text-[var(--muted-foreground)]"}`} onClick={() => { if (!speech.isListening) speechBaseRef.current = newInformation.trim(); speech.toggleListening(); }}><Mic className="size-4" /></button> : <span className="absolute bottom-3 right-3 text-[var(--muted-foreground)]" title="Voice input is not supported in this browser"><Mic className="size-4 opacity-60" /></span>}
             </div>
-            {(error || speech.error) && <p className="mt-2 text-xs text-red-600">{error || speech.error}</p>}
+            {(error || speech.error) && <StatusMessage className="mt-2" title="Unable to update favorite" variant="error">{error || speech.error}</StatusMessage>}
             <Button className="mt-4 w-full" disabled={!newInformation.trim() || isUpdating} onClick={updateWithAI}><Sparkles className="size-4" />{isUpdating ? "Updating…" : "Update with AI"}</Button>
           </div>
         </aside>

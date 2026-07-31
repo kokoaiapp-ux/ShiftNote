@@ -77,7 +77,8 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
       setTemplateId(localStorage.getItem("shiftnote-template") ?? "nurse-skilled-nursing-note");
       setThemeState((localStorage.getItem("shiftnote-theme") as Theme) ?? "system");
       setCompactState(localStorage.getItem("shiftnote-compact") === "true");
-      setPrimaryColorState(localStorage.getItem("shiftnote-primary-color") ?? "#176b4c");
+      const storedPrimary = localStorage.getItem("shiftnote-primary-color") ?? "#176b4c";
+      setPrimaryColorState(storedPrimary === "#c55a2d" ? "#a94720" : storedPrimary);
       try {
         setFavorites(JSON.parse(localStorage.getItem("shiftnote-favorites") ?? "[]"));
         setHistory(JSON.parse(localStorage.getItem("shiftnote-history") ?? "[]"));

@@ -129,3 +129,54 @@ test("history, favorites, auto-save, manual save, and AI update paths remain wir
   assert.match(favoriteEditor, /product\.updateFavorite/);
   assert.match(favoriteEditor, /product\.updateFavoriteWithAI/);
 });
+
+test("status messages use shared theme-aware accessible styles", async () => {
+  const [css, chat, history, favorite, copilot, statusComponent] = await Promise.all([
+    readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
+    readFile(new URL("../components/floating-assistant/ChatInterface.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/product/HistoryWorkspace.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/favorites/[id]/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/copilot/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/ui/status-message.tsx", import.meta.url), "utf8"),
+  ]);
+
+  for (const variant of ["error", "warning", "success", "info", "neutral"]) {
+    assert.match(css, new RegExp(`\\.status-message--${variant}`));
+    assert.match(css, new RegExp(`\\.dark \\.status-message--${variant}`));
+  }
+  assert.match(statusComponent, /role=\{variant === "error" \? "alert" : "status"\}/);
+  assert.match(statusComponent, /aria-live=\{variant === "error" \? "assertive" : "polite"\}/);
+  assert.match(chat, /StatusMessage[\s\S]*variant="error"/);
+  assert.match(chat, /StatusMessage[\s\S]*variant="warning"/);
+  assert.match(history, /StatusMessage[\s\S]*variant="error"/);
+  assert.match(favorite, /StatusMessage[\s\S]*variant="error"/);
+  assert.match(copilot, /StatusMessage[\s\S]*variant="warning"/);
+  assert.doesNotMatch([chat, history, favorite, copilot].join("\n"), /text-red-600|bg-red-50|bg-amber-50/);
+
+  const contrastPairs = [
+    ["#7f1d1d", "#fff1f2"], ["#fecaca", "#450a0a"],
+    ["#78350f", "#fffbeb"], ["#fde68a", "#451a03"],
+    ["#14532d", "#f0fdf4"], ["#bbf7d0", "#052e16"],
+    ["#1e3a8a", "#eff6ff"], ["#bfdbfe", "#172554"],
+    ["#334155", "#f8fafc"], ["#e2e8f0", "#1e293b"],
+    ["#586b63", "#f6f8f7"], ["#586b63", "#ffffff"],
+  ];
+  for (const [foreground, background] of contrastPairs) {
+    assert.ok(contrastRatio(foreground, background) >= 4.5, `${foreground} on ${background} must meet WCAG AA`);
+  }
+  for (const accent of ["#176b4c", "#2563eb", "#7c3aed", "#a94720"]) {
+    assert.ok(contrastRatio("#ffffff", accent) >= 4.5, `white text on ${accent} must meet WCAG AA`);
+  }
+});
+
+function contrastRatio(first, second) {
+  const high = Math.max(relativeLuminance(first), relativeLuminance(second));
+  const low = Math.min(relativeLuminance(first), relativeLuminance(second));
+  return (high + 0.05) / (low + 0.05);
+}
+
+function relativeLuminance(hex) {
+  const channels = hex.match(/[a-f\d]{2}/gi).map((value) => Number.parseInt(value, 16) / 255);
+  const [red, green, blue] = channels.map((value) => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+  return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+}

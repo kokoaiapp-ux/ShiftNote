@@ -4,6 +4,7 @@ import { Check, Copy, CopyPlus, FilePlus2, Mic, Save, Sparkles, Star, Trash2, X 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useProduct, type SavedNote, type StoredAttachment } from "./ProductProvider";
 import { Button } from "@/components/ui/button";
+import { StatusMessage } from "@/components/ui/status-message";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { getMode, getTemplate } from "@/lib/product-data";
 
@@ -135,7 +136,7 @@ export function HistoryWorkspace({ noteId, compact = false, onDeleted }: { noteI
       <section className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4">
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <span className="text-xs font-medium text-[var(--muted-foreground)]">{getMode(note.modeId).name} · {getTemplate(note.templateId).name}</span>
-          <span className="ml-auto inline-flex items-center gap-1 text-[11px] text-[var(--muted-foreground)]">{saveStatus === "saving" ? "Saving…" : <><Check className="size-3 text-[var(--primary)]" />Saved</>}</span>
+          <span aria-live="polite" className="ml-auto inline-flex items-center gap-1 text-[11px] font-medium text-[var(--foreground)]">{saveStatus === "saving" ? "Saving…" : <><Check className="size-3 text-[var(--primary)]" />Saved</>}</span>
         </div>
         <textarea className={compact ? "min-h-64 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] p-3 text-xs leading-5 outline-none focus:border-[var(--primary)]" : "min-h-[480px] w-full rounded-xl border border-[var(--border)] bg-[var(--background)] p-4 text-sm leading-7 outline-none focus:border-[var(--primary)]"} onChange={(event) => changeDraft(event.target.value)} value={draft} />
         {(note.attachments?.length ?? 0) > 0 && <div className="mt-2 flex flex-wrap gap-1.5">{note.attachments?.map((item) => <span className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--primary-soft)] px-2.5 py-1.5 text-[10px] text-[var(--primary)]" key={item.id}>{item.name}<button aria-label={`Remove ${item.name}`} onClick={() => removeAttachment(item.id)}><X className="size-3" /></button></span>)}</div>}
@@ -162,7 +163,7 @@ export function HistoryWorkspace({ noteId, compact = false, onDeleted }: { noteI
             }} size="sm" variant={speech.isListening ? "default" : "outline"}><Mic className="size-3.5" />{speech.isListening ? "Stop" : voiceStarted ? "Continue" : "Voice"}</Button>
             {voiceStarted && <Button onClick={() => { speech.stopListening(); setNewInformation(voiceBaseRef.current); setVoiceStarted(false); }} size="sm" variant="ghost">Cancel</Button>}
           </div>
-          {(error || speech.error) && <p className="mt-2 text-[11px] text-red-600">{error || speech.error}</p>}
+          {(error || speech.error) && <StatusMessage className="mt-2" title="Unable to update note" variant="error">{error || speech.error}</StatusMessage>}
           <Button className="mt-3 w-full" disabled={!newInformation.trim() || isUpdating || speech.isListening} onClick={updateWithAI}><Sparkles className="size-4" />{isUpdating ? "Updating…" : "Update with AI"}</Button>
         </section>
         <section className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4">

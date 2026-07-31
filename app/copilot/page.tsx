@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/product/PageHeader";
 import { useProduct } from "@/components/product/ProductProvider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { StatusMessage } from "@/components/ui/status-message";
 
 export default function CopilotPage() {
   const product = useProduct();
@@ -24,10 +25,7 @@ export default function CopilotPage() {
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted-foreground)]">Active context</p>
             <div className="mt-4"><Badge>{product.mode.name} Mode</Badge><h2 className="mt-3 font-semibold">{product.template.name}</h2><p className="mt-2 text-xs leading-5 text-[var(--muted-foreground)]">{product.template.description}</p></div>
           </div>
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-100">
-            <p className="text-xs font-semibold">Clinical safety</p>
-            <p className="mt-2 text-xs leading-5 opacity-75">Use de-identified information in this prototype. Verify every fact and never place unreviewed output in a clinical record.</p>
-          </div>
+          <StatusMessage className="p-5" title="Clinical safety" variant="warning">Use de-identified information in this prototype. Verify every fact and never place unreviewed output in a clinical record.</StatusMessage>
         </aside>
       </div>
     </>
