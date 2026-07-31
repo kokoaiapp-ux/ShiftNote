@@ -63,6 +63,9 @@ test("send validity reacts to controlled text and attachments", async () => {
   assert.match(chat, /disabled=\{!canSend\}/);
   assert.match(chat, /if \(!canSend\) return/);
   assert.match(chat, /setInput\(\[speechBaseRef\.current, text\]\.filter\(Boolean\)\.join\(" "\)\)/);
+  assert.match(chat, /console\.info\("Input state updated:", input\)/);
+  assert.match(chat, /console\.info\("Send button enabled:", true\)/);
+  assert.match(chat, /console\.info\("Message successfully sent:", value\)/);
   assert.doesNotMatch(chat, /onKey(?:Down|Up|Press).*canSend/s);
 });
 
@@ -77,6 +80,10 @@ test("speech recognition inserts transcripts and explains recoverable failures",
   assert.match(speech, /transcriptRef\.current = transcript/);
   assert.match(speech, /if \(transcriptRef\.current\) onTranscript\(transcriptRef\.current\)/);
   assert.match(speech, /onEnd\?\.\(transcriptRef\.current\)/);
+  assert.match(speech, /console\.info\("SpeechRecognition started"\)/);
+  assert.match(speech, /console\.info\("onresult fired"\)/);
+  assert.match(speech, /console\.info\("Transcript received:", transcript\)/);
+  assert.match(speech, /ended without returning a transcript/);
   assert.match(speech, /recognition\.onend/);
   assert.match(speech, /Microphone access was denied/);
   assert.match(speech, /No working microphone was found/);

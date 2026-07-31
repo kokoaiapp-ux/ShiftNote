@@ -31,12 +31,14 @@ export function useSpeechRecognition({ onTranscript, onEnd, language = "en-US" }
     recognition.interimResults = true;
     recognition.lang = language;
     recognition.onresult = (event) => {
+      console.info("onresult fired");
       const segments: string[] = [];
       for (let i = 0; i < event.results.length; i += 1) {
         segments.push(event.results[i][0].transcript);
       }
       const transcript = segments.join(" ").trim();
       if (!transcript) return;
+      console.info("Transcript received:", transcript);
       transcriptRef.current = transcript;
       onTranscript(transcript);
     };
@@ -57,6 +59,7 @@ export function useSpeechRecognition({ onTranscript, onEnd, language = "en-US" }
       // `end`. Re-emit the last non-empty transcript so a stop event cannot
       // leave the controlled chat input stale.
       if (transcriptRef.current) onTranscript(transcriptRef.current);
+      else setError("Speech recognition ended without returning a transcript. Confirm microphone access, speak after recording starts, and try again.");
       onEnd?.(transcriptRef.current);
     };
     recognitionRef.current = recognition;
@@ -73,6 +76,7 @@ export function useSpeechRecognition({ onTranscript, onEnd, language = "en-US" }
     transcriptRef.current = "";
     try {
       recognition.start();
+      console.info("SpeechRecognition started");
       setIsListening(true);
       return true;
     } catch {

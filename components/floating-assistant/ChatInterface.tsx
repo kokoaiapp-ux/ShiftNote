@@ -68,6 +68,16 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
   }, [messages, status]);
 
   useEffect(() => {
+    if (!input) return;
+    console.info("Input state updated:", input);
+  }, [input]);
+
+  useEffect(() => {
+    if (!canSend) return;
+    console.info("Send button enabled:", true);
+  }, [canSend]);
+
+  useEffect(() => {
     if (recordingPhase !== "recording") return;
     const startedAt = Date.now();
     const baseSeconds = recordingOffsetRef.current;
@@ -95,6 +105,7 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
     const transfer = new DataTransfer();
     attachments.forEach((file) => transfer.items.add(file));
     onSend(value, transfer.files.length ? transfer.files : undefined);
+    console.info("Message successfully sent:", value);
     setInput("");
     setAttachments([]);
     setRecordingPhase("idle");
