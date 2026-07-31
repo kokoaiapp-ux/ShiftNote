@@ -4,12 +4,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 type Options = {
   onTranscript: (text: string) => void;
-  onEnd?: () => void;
+  onEnd?: (text: string) => void;
   language?: string;
 };
 
 export function useSpeechRecognition({ onTranscript, onEnd, language = "en-US" }: Options) {
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const transcriptRef = useRef("");
   const [isListening, setIsListening] = useState(false);
   const [isSupported] = useState(
     () =>
@@ -34,7 +35,10 @@ export function useSpeechRecognition({ onTranscript, onEnd, language = "en-US" }
       for (let i = 0; i < event.results.length; i += 1) {
         segments.push(event.results[i][0].transcript);
       }
-      onTranscript(segments.join(" ").trim());
+      const transcript = segments.join(" ").trim();
+      if (!transcript) return;
+      transcriptRef.current = transcript;
+      onTranscript(transcript);
     };
     recognition.onerror = (event) => {
       const messages: Record<string, string> = {
@@ -49,7 +53,11 @@ export function useSpeechRecognition({ onTranscript, onEnd, language = "en-US" }
     };
     recognition.onend = () => {
       setIsListening(false);
-      onEnd?.();
+      // Some browsers finish the final recognition result immediately before
+      // `end`. Re-emit the last non-empty transcript so a stop event cannot
+      // leave the controlled chat input stale.
+      if (transcriptRef.current) onTranscript(transcriptRef.current);
+      onEnd?.(transcriptRef.current);
     };
     recognitionRef.current = recognition;
     return () => recognition.stop();
@@ -62,6 +70,7 @@ export function useSpeechRecognition({ onTranscript, onEnd, language = "en-US" }
       return false;
     }
     setError(null);
+    transcriptRef.current = "";
     try {
       recognition.start();
       setIsListening(true);

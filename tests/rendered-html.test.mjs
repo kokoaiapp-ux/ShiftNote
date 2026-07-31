@@ -59,7 +59,10 @@ test("speech recognition inserts transcripts and explains recoverable failures",
   );
 
   assert.match(speech, /recognition\.interimResults = true/);
-  assert.match(speech, /onTranscript\(segments\.join\(" "\)\.trim\(\)\)/);
+  assert.match(speech, /const transcript = segments\.join\(" "\)\.trim\(\)/);
+  assert.match(speech, /transcriptRef\.current = transcript/);
+  assert.match(speech, /if \(transcriptRef\.current\) onTranscript\(transcriptRef\.current\)/);
+  assert.match(speech, /onEnd\?\.\(transcriptRef\.current\)/);
   assert.match(speech, /recognition\.onend/);
   assert.match(speech, /Microphone access was denied/);
   assert.match(speech, /No working microphone was found/);

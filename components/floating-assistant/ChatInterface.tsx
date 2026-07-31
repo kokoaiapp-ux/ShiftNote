@@ -52,7 +52,10 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
   const handleTranscript = useCallback((text: string) => {
     setInput([speechBaseRef.current, text].filter(Boolean).join(" "));
   }, []);
-  const handleSpeechEnd = useCallback(() => {
+  const handleSpeechEnd = useCallback((text: string) => {
+    if (text) {
+      setInput([speechBaseRef.current, text].filter(Boolean).join(" "));
+    }
     setRecordingPhase((phase) => phase === "recording" ? "paused" : phase);
   }, []);
   const speech = useSpeechRecognition({ onTranscript: handleTranscript, onEnd: handleSpeechEnd });
