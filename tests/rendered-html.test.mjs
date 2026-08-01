@@ -78,6 +78,11 @@ test("MediaRecorder audio is uploaded to OpenAI and inserts the returned transcr
 
   assert.match(recorder, /navigator\.mediaDevices\.getUserMedia/);
   assert.match(recorder, /new MediaRecorder/);
+  assert.match(recorder, /new File\(\[segment\]/);
+  assert.match(recorder, /MediaRecorder chunk received:/);
+  assert.match(recorder, /MediaRecorder stopped and finalized:/);
+  assert.match(recorder, /OpenAI transcription upload started:/);
+  assert.match(recorder, /debugRecordingUrl/);
   assert.match(recorder, /formData\.append\("audio"/);
   assert.match(recorder, /fetch\("\/api\/transcribe"/);
   assert.match(recorder, /onTranscriptRef\.current\(transcript\)/);
@@ -93,6 +98,7 @@ test("MediaRecorder audio is uploaded to OpenAI and inserts the returned transcr
   assert.match(chat, /speech\.startListening\(true\)/);
   assert.match(chat, /setRecordingPhase\("transcribing"\)/);
   assert.match(chat, /Transcribing audio/);
+  assert.match(chat, /Download Recording/);
 });
 
 test("history, favorites, auto-save, manual save, and AI update paths remain wired", async () => {

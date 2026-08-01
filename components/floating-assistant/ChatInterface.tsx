@@ -2,7 +2,7 @@
 
 import type { UIMessage } from "ai";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
-import { Check, Copy, FilePlus2, LoaderCircle, Mic, Paperclip, Pencil, Plus, RefreshCw, Save, Send, Square, Star, X } from "lucide-react";
+import { Check, Copy, Download, FilePlus2, LoaderCircle, Mic, Paperclip, Pencil, Plus, RefreshCw, Save, Send, Square, Star, X } from "lucide-react";
 import { useAudioTranscription } from "@/hooks/useAudioTranscription";
 import { useProduct, type SavedNote } from "@/components/product/ProductProvider";
 import { Button } from "@/components/ui/button";
@@ -261,6 +261,12 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
       <div className="border-t border-[var(--border)] bg-[var(--card)] p-4">
         {(speech.error || error) && <StatusMessage className="mb-2" title="Unable to use voice input" variant="error">{speech.error ?? error?.message}</StatusMessage>}
         {!speech.isSupported && !speech.error && <StatusMessage className="mb-2" title="Voice input unavailable" variant="warning">{speech.supportMessage}</StatusMessage>}
+        {speech.debugRecordingUrl && speech.diagnostics && (
+          <div className="mb-2 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--muted)] px-3 py-2 text-[10px] text-[var(--foreground)]">
+            <span>{(speech.diagnostics.bytes / 1024).toFixed(1)} KB · {(speech.diagnostics.durationMs / 1000).toFixed(1)} sec · {speech.diagnostics.mimeType}</span>
+            <a className="ml-auto inline-flex items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--card)] px-2.5 py-1.5 font-semibold text-[var(--primary)] hover:bg-[var(--primary-soft)]" download={`debug_recording.${speech.diagnostics.extension}`} href={speech.debugRecordingUrl}><Download className="size-3" />Download Recording</a>
+          </div>
+        )}
         {recordingPhase !== "idle" && (
           <div className="mb-2 flex flex-wrap items-center gap-3 rounded-xl border border-[var(--primary)]/40 bg-[color-mix(in_srgb,var(--primary)_12%,var(--card))] px-3.5 py-3 text-xs text-[var(--foreground)] shadow-sm">
             <span className={cn("size-2.5 rounded-full bg-[var(--primary)] ring-4 ring-[var(--primary)]/15", recordingPhase === "recording" && "animate-pulse")} />

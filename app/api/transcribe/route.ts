@@ -39,6 +39,12 @@ export async function POST(request: Request) {
   if (files.some((file) => file.type && !SUPPORTED_TYPES.has(file.type.toLowerCase()))) {
     return Response.json({ error: "This browser produced an unsupported audio format. Use current Microsoft Edge or Google Chrome." }, { status: 415 });
   }
+  console.info("Transcription upload received:", files.map((file) => ({
+    bytes: file.size,
+    contentType: file.type,
+    extension: file.name.split(".").pop()?.toLowerCase() ?? "unknown",
+    name: file.name,
+  })));
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), OPENAI_TIMEOUT_MS);
@@ -48,7 +54,7 @@ export async function POST(request: Request) {
   try {
     for (const [index, file] of files.entries()) {
       let result = await transcribeFile(file, index, requestedModel, controller.signal);
-      if (!result.text && requestedModel !== "whisper-1") {
+      if (result.ok && !result.text && requestedModel !== "whisper-1") {
         console.warn("Primary transcription returned no text; retrying with whisper-1.", {
           bytes: file.size,
           contentType: file.type,
