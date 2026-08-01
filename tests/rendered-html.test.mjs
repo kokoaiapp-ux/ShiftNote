@@ -102,6 +102,8 @@ test("MediaRecorder audio is uploaded to OpenAI and inserts the returned transcr
   assert.match(chat, /speech\.stopListening\("user-stop", false\)/);
   assert.match(chat, /Preview/);
   assert.match(chat, /Submit Recording/);
+  assert.match(chat, /Recording microphone/);
+  assert.match(chat, /No microphone signal detected/);
   assert.match(chat, /speech\.transcribeRecording\(\)/);
 });
 

@@ -41,6 +41,8 @@ export function useAudioTranscription({ onTranscript, onEnd }: Options) {
   const [error, setError] = useState<string | null>(null);
   const [debugRecordingUrl, setDebugRecordingUrl] = useState<string | null>(null);
   const [diagnostics, setDiagnostics] = useState<RecordingDiagnostics | null>(null);
+  const [inputDevices, setInputDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState("");
   const [isSupported] = useState(
     () =>
       typeof window !== "undefined" &&
@@ -55,6 +57,22 @@ export function useAudioTranscription({ onTranscript, onEnd }: Options) {
     onTranscriptRef.current = onTranscript;
     onEndRef.current = onEnd;
   }, [onEnd, onTranscript]);
+
+  const refreshInputDevices = useCallback(async () => {
+    if (!navigator.mediaDevices?.enumerateDevices) return;
+    const devices = (await navigator.mediaDevices.enumerateDevices()).filter((device) => device.kind === "audioinput");
+    setInputDevices(devices);
+    console.info("Available microphone inputs:", devices.map((device) => ({ deviceId: device.deviceId, label: device.label || "Unnamed microphone" })));
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => void refreshInputDevices(), 0);
+    navigator.mediaDevices?.addEventListener?.("devicechange", refreshInputDevices);
+    return () => {
+      window.clearTimeout(timer);
+      navigator.mediaDevices?.removeEventListener?.("devicechange", refreshInputDevices);
+    };
+  }, [refreshInputDevices]);
 
   const releaseStream = useCallback(() => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -152,14 +170,10 @@ export function useAudioTranscription({ onTranscript, onEnd }: Options) {
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          channelCount: 1,
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
+        audio: selectedDeviceId ? { deviceId: { exact: selectedDeviceId } } : true,
       });
       streamRef.current = stream;
+      await refreshInputDevices();
       const permission = await navigator.permissions?.query({ name: "microphone" as PermissionName }).catch(() => null);
       const track = stream.getAudioTracks()[0];
       console.info("Microphone permission status:", permission?.state ?? "granted by active stream");
@@ -224,7 +238,7 @@ export function useAudioTranscription({ onTranscript, onEnd }: Options) {
             : "Unable to start audio recording. Check the microphone and try again.");
       return false;
     }
-  }, [isSupported, releaseMeter, releaseStream, supportMessage]);
+  }, [isSupported, refreshInputDevices, releaseMeter, releaseStream, selectedDeviceId, supportMessage]);
 
   const stopListening = useCallback(async (_reason = "user-stop", transcribeAfterStop = true) => {
     const recorder = recorderRef.current;
@@ -299,6 +313,9 @@ export function useAudioTranscription({ onTranscript, onEnd }: Options) {
     isListening,
     isSupported,
     isTranscribing,
+    inputDevices,
+    selectedDeviceId,
+    setSelectedDeviceId,
     startListening,
     stopListening,
     supportMessage,

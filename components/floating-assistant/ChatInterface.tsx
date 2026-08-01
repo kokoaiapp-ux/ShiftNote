@@ -284,11 +284,23 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
       <div className="border-t border-[var(--border)] bg-[var(--card)] p-4">
         {(speech.error || error) && <StatusMessage className="mb-2" title="Unable to use voice input" variant="error">{speech.error ?? error?.message}</StatusMessage>}
         {!speech.isSupported && !speech.error && <StatusMessage className="mb-2" title="Voice input unavailable" variant="warning">{speech.supportMessage}</StatusMessage>}
+        {speech.isSupported && speech.inputDevices.length > 0 && recordingPhase === "idle" && (
+          <label className="mb-2 flex items-center gap-2 text-[10px] text-[var(--muted-foreground)]">
+            <span className="shrink-0">Microphone</span>
+            <select aria-label="Recording microphone" className="min-w-0 flex-1 rounded-lg border border-[var(--border)] bg-[var(--background)] px-2.5 py-2 text-xs text-[var(--foreground)] outline-none focus:border-[var(--primary)]" onChange={(event) => speech.setSelectedDeviceId(event.target.value)} value={speech.selectedDeviceId}>
+              <option value="">Windows default microphone</option>
+              {speech.inputDevices.filter((device) => device.deviceId && device.deviceId !== "default").map((device, index) => <option key={device.deviceId} value={device.deviceId}>{device.label || `Microphone ${index + 1}`}</option>)}
+            </select>
+          </label>
+        )}
         {speech.debugRecordingUrl && speech.diagnostics && (
           <div className="mb-2 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--muted)] px-3 py-2 text-[10px] text-[var(--foreground)]">
             <span>{(speech.diagnostics.bytes / 1024).toFixed(1)} KB · {(speech.diagnostics.durationMs / 1000).toFixed(1)} sec · {speech.diagnostics.mimeType}</span>
             <a className="ml-auto inline-flex items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--card)] px-2.5 py-1.5 font-semibold text-[var(--primary)] hover:bg-[var(--primary-soft)]" download={`debug_recording.${speech.diagnostics.extension}`} href={speech.debugRecordingUrl}><Download className="size-3" />Download Recording</a>
           </div>
+        )}
+        {recordingPhase === "paused" && speech.diagnostics && speech.diagnostics.peakLevel < 0.008 && (
+          <StatusMessage className="mb-2" title="No microphone signal detected" variant="warning">The recording file is valid, but the selected microphone produced silence. Choose a different microphone above, then record again.</StatusMessage>
         )}
         {speech.debugRecordingUrl && <audio onEnded={() => setIsPreviewPlaying(false)} ref={previewAudioRef} src={speech.debugRecordingUrl} />}
         {recordingPhase !== "idle" && (
