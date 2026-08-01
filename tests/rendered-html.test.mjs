@@ -98,13 +98,14 @@ test("MediaRecorder audio is uploaded to OpenAI and inserts the returned transcr
   assert.match(chat, /speech\.startListening\(true\)/);
   assert.match(chat, /setRecordingPhase\("transcribing"\)/);
   assert.match(chat, /Transcribing audio/);
-  assert.match(chat, /Download Recording/);
+  assert.doesNotMatch(chat, /Download Recording/);
   assert.match(chat, /speech\.stopListening\("user-stop", false\)/);
   assert.match(chat, /Preview/);
-  assert.match(chat, /Submit Recording/);
+  assert.match(chat, /Send voice recording/);
   assert.match(chat, /Recording microphone/);
   assert.match(chat, /No microphone signal detected/);
   assert.match(chat, /speech\.transcribeRecording\(\)/);
+  assert.match(chat, /onSend\(transcript/);
 });
 
 test("history, favorites, auto-save, manual save, and AI update paths remain wired", async () => {

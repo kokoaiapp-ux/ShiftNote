@@ -2,7 +2,7 @@
 
 import type { UIMessage } from "ai";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
-import { Check, Copy, Download, FilePlus2, LoaderCircle, Mic, Paperclip, Pause, Pencil, Play, Plus, RefreshCw, Save, Send, Square, Star, Upload, X } from "lucide-react";
+import { Check, Copy, FilePlus2, LoaderCircle, Mic, Paperclip, Pause, Pencil, Play, Plus, RefreshCw, Save, Send, Square, Star, X } from "lucide-react";
 import { useAudioTranscription } from "@/hooks/useAudioTranscription";
 import { useProduct, type SavedNote } from "@/components/product/ProductProvider";
 import { Button } from "@/components/ui/button";
@@ -159,7 +159,21 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
     previewAudioRef.current?.pause();
     setIsPreviewPlaying(false);
     setRecordingPhase("transcribing");
-    await speech.transcribeRecording();
+    try {
+      const transcript = await speech.transcribeRecording();
+      if (transcript) {
+        const transfer = new DataTransfer();
+        attachments.forEach((file) => transfer.items.add(file));
+        onSend(transcript, transfer.files.length ? transfer.files : undefined);
+        console.info("Voice message successfully sent:", { characters: transcript.length });
+        setAttachments([]);
+        setInput("");
+        setRecordingSeconds(0);
+        recordingOffsetRef.current = 0;
+      }
+    } finally {
+      setRecordingPhase("idle");
+    }
   }
 
   async function toggleRecordingPreview() {
@@ -285,19 +299,13 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
         {(speech.error || error) && <StatusMessage className="mb-2" title="Unable to use voice input" variant="error">{speech.error ?? error?.message}</StatusMessage>}
         {!speech.isSupported && !speech.error && <StatusMessage className="mb-2" title="Voice input unavailable" variant="warning">{speech.supportMessage}</StatusMessage>}
         {speech.isSupported && speech.inputDevices.length > 0 && recordingPhase === "idle" && (
-          <label className="mb-2 flex items-center gap-2 text-[10px] text-[var(--muted-foreground)]">
+          <label className="mb-2 hidden items-center gap-2 text-[10px] text-[var(--muted-foreground)] sm:flex">
             <span className="shrink-0">Microphone</span>
             <select aria-label="Recording microphone" className="min-w-0 flex-1 rounded-lg border border-[var(--border)] bg-[var(--background)] px-2.5 py-2 text-xs text-[var(--foreground)] outline-none focus:border-[var(--primary)]" onChange={(event) => speech.setSelectedDeviceId(event.target.value)} value={speech.selectedDeviceId}>
               <option value="">Windows default microphone</option>
               {speech.inputDevices.filter((device) => device.deviceId && device.deviceId !== "default").map((device, index) => <option key={device.deviceId} value={device.deviceId}>{device.label || `Microphone ${index + 1}`}</option>)}
             </select>
           </label>
-        )}
-        {speech.debugRecordingUrl && speech.diagnostics && (
-          <div className="mb-2 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--muted)] px-3 py-2 text-[10px] text-[var(--foreground)]">
-            <span>{(speech.diagnostics.bytes / 1024).toFixed(1)} KB · {(speech.diagnostics.durationMs / 1000).toFixed(1)} sec · {speech.diagnostics.mimeType}</span>
-            <a className="ml-auto inline-flex items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--card)] px-2.5 py-1.5 font-semibold text-[var(--primary)] hover:bg-[var(--primary-soft)]" download={`debug_recording.${speech.diagnostics.extension}`} href={speech.debugRecordingUrl}><Download className="size-3" />Download Recording</a>
-          </div>
         )}
         {recordingPhase === "paused" && speech.diagnostics && speech.diagnostics.peakLevel < 0.008 && (
           <StatusMessage className="mb-2" title="No microphone signal detected" variant="warning">The recording file is valid, but the selected microphone produced silence. Choose a different microphone above, then record again.</StatusMessage>
@@ -319,7 +327,7 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
             {recordingPhase === "paused" && <>
               <button className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--primary)]/30 bg-[var(--card)] px-3 py-2 font-semibold text-[var(--primary)] hover:bg-[var(--primary-soft)]" onClick={() => void toggleRecordingPreview()} type="button">{isPreviewPlaying ? <Pause className="size-3 fill-current" /> : <Play className="size-3 fill-current" />}{isPreviewPlaying ? "Pause" : "Preview"}</button>
               <button className="rounded-lg bg-[var(--primary)] px-3 py-2 font-semibold text-white shadow-sm hover:brightness-95" onClick={continueRecording} type="button">Continue</button>
-              <button className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--primary)] px-3 py-2 font-semibold text-white shadow-sm hover:brightness-95" onClick={() => void submitRecordingForTranscription()} type="button"><Upload className="size-3" /> Submit Recording</button>
+              <button aria-label="Send voice recording" className="grid size-10 place-items-center rounded-full bg-[var(--primary)] text-white shadow-sm hover:brightness-95 disabled:opacity-60" disabled={isGenerating} onClick={() => void submitRecordingForTranscription()} type="button"><Send className="size-4" /></button>
               <button className="rounded-lg border border-[var(--primary)]/30 bg-[var(--card)] px-3 py-2 font-semibold text-[var(--primary)] hover:bg-[var(--primary-soft)]" onClick={cancelRecording} type="button">Cancel</button>
             </>}
             {recordingPhase === "transcribing" && <><LoaderCircle className="size-4 animate-spin text-[var(--primary)]" /><button className="rounded-lg border border-[var(--primary)]/30 bg-[var(--card)] px-3 py-2 font-semibold text-[var(--primary)] hover:bg-[var(--primary-soft)]" onClick={cancelRecording} type="button">Cancel</button></>}

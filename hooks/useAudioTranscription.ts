@@ -93,12 +93,12 @@ export function useAudioTranscription({ onTranscript, onEnd }: Options) {
     setDebugRecordingUrl(url);
   }, []);
 
-  const transcribe = useCallback(async () => {
+  const transcribe = useCallback(async (notifyTranscript = true): Promise<string> => {
     const segments = completedSegmentsRef.current;
     if (!segments.length || segments.every((segment) => segment.size === 0)) {
       setError("No audio was recorded. Speak after recording starts, then tap Stop.");
       onEndRef.current?.("");
-      return;
+      return "";
     }
 
     const controller = new AbortController();
@@ -136,8 +136,11 @@ export function useAudioTranscription({ onTranscript, onEnd }: Options) {
       const transcript = payload?.text?.trim() ?? "";
       if (!transcript) throw new Error("OpenAI did not detect any speech in the recording. Try again and speak clearly after recording starts.");
       console.info("Transcript received:", transcript);
-      onTranscriptRef.current(transcript);
-      onEndRef.current?.(transcript);
+      if (notifyTranscript) {
+        onTranscriptRef.current(transcript);
+        onEndRef.current?.(transcript);
+      }
+      return transcript;
     } catch (caught) {
       if (cancelledRef.current) return;
       const timedOut = controller.signal.aborted && controller.signal.reason === "timeout";
@@ -145,6 +148,7 @@ export function useAudioTranscription({ onTranscript, onEnd }: Options) {
         ? "Transcription timed out. Check your connection and try a shorter recording."
         : caught instanceof Error ? caught.message : "Unable to transcribe the recording. Please try again.");
       onEndRef.current?.("");
+      return "";
     } finally {
       window.clearTimeout(timeout);
       if (abortRef.current === controller) abortRef.current = null;
@@ -319,7 +323,7 @@ export function useAudioTranscription({ onTranscript, onEnd }: Options) {
     startListening,
     stopListening,
     supportMessage,
-    transcribeRecording: transcribe,
+    transcribeRecording: () => transcribe(false),
     toggleListening,
   };
 }
