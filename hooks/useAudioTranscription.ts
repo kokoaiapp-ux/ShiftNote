@@ -226,7 +226,7 @@ export function useAudioTranscription({ onTranscript, onEnd }: Options) {
     }
   }, [isSupported, releaseMeter, releaseStream, supportMessage]);
 
-  const stopListening = useCallback(async (_reason = "user-stop") => {
+  const stopListening = useCallback(async (_reason = "user-stop", transcribeAfterStop = true) => {
     const recorder = recorderRef.current;
     if (!recorder || recorder.state === "inactive") return;
     console.info("MediaRecorder stop requested:", _reason);
@@ -257,7 +257,7 @@ export function useAudioTranscription({ onTranscript, onEnd }: Options) {
       recorder.stop();
       setIsListening(false);
     });
-    if (!cancelledRef.current) await transcribe();
+    if (!cancelledRef.current && transcribeAfterStop) await transcribe();
   }, [releaseMeter, releaseStream, replaceDebugRecording, transcribe]);
 
   const cancel = useCallback(() => {
@@ -302,6 +302,7 @@ export function useAudioTranscription({ onTranscript, onEnd }: Options) {
     startListening,
     stopListening,
     supportMessage,
+    transcribeRecording: transcribe,
     toggleListening,
   };
 }
