@@ -78,7 +78,7 @@ test("professional modes and generic UI use clinical documentation terminology",
     readFile(new URL("../app/api/chat/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/chat/update/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../components/floating-assistant/ChatInterface.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/dashboard/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/favorites/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/history/page.tsx", import.meta.url), "utf8"),
   ]);

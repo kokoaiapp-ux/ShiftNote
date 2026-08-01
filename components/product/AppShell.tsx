@@ -9,7 +9,7 @@ import { useProduct } from "./ProductProvider";
 import { FloatingAssistant } from "@/components/floating-assistant/FloatingAssistant";
 
 const navigation = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/copilot", label: "AI Copilot", icon: MessageSquareText },
   { href: "/modes", label: "Modes", icon: Stethoscope },
   { href: "/templates", label: "Templates", icon: FileStack },
@@ -22,11 +22,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { mode, template } = useProduct();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const publicRoutes = ["/", "/login", "/signup", "/onboarding", "/subscription", "/privacy", "/terms"];
+  if (publicRoutes.includes(pathname)) return <>{children}</>;
 
   const sidebar = (
     <aside className="flex h-full w-64 flex-col border-r border-[var(--border)] bg-[var(--sidebar)] px-4 py-5">
       <div className="flex items-center justify-between px-2">
-        <Link className="flex items-center gap-3" href="/">
+        <Link className="flex items-center gap-3" href="/dashboard">
           <span className="grid size-10 place-items-center rounded-xl bg-[var(--primary)] text-white shadow-lg"><Sparkles className="size-5" /></span>
           <span><span className="block font-semibold tracking-[-0.02em]">ShiftNote</span><span className="text-[11px] text-[var(--muted-foreground)]">Clinical Copilot</span></span>
         </Link>

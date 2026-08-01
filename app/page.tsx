@@ -1,64 +1,9 @@
-"use client";
+import Link from "next/link";
+import { ArrowRight, Check, Clock3, FileCheck2, LockKeyhole, MessageSquareText, Sparkles, Stethoscope, WandSparkles } from "lucide-react";
+import { PublicPage } from "@/components/public/PublicChrome";
 
-import { useRouter } from "next/navigation";
-import { Clock3, FileText, Heart, Sparkles, TimerReset } from "lucide-react";
-import { ProductIcon } from "@/components/product/Icon";
-import { useProduct } from "@/components/product/ProductProvider";
-import { Card, CardContent } from "@/components/ui/card";
-import { getQuickActionsForMode } from "@/lib/product-data";
-
-export default function DashboardPage() {
-  const router = useRouter();
-  const product = useProduct();
-  const quickTemplates = getQuickActionsForMode(product.mode.id);
-
-  function openTemplate(id: string) {
-    product.setTemplate(id);
-    product.clearChat(false);
-    router.push("/copilot");
-  }
-
-  return (
-    <>
-      <section className="relative overflow-hidden rounded-[28px] bg-[var(--primary)] px-7 py-8 text-white shadow-xl md:px-10 md:py-10">
-        <div className="absolute -right-16 -top-24 size-72 rounded-full bg-white/10 blur-3xl" />
-        <p className="text-sm text-white/70">Good morning, Maria</p>
-        <h1 className="mt-2 max-w-2xl text-3xl font-semibold tracking-[-0.04em] md:text-4xl">Ready to simplify your documentation?</h1>
-        <p className="mt-3 max-w-xl text-sm leading-6 text-white/70">Choose a structured workflow or open the copilot and describe the clinical facts in your own words.</p>
-        <button className="mt-7 inline-flex h-11 items-center gap-2 rounded-xl bg-white px-5 text-sm font-semibold text-[var(--primary)] transition hover:-translate-y-0.5" onClick={() => { product.clearChat(); router.push("/copilot"); }}>
-          <Sparkles className="size-4" /> Open AI Copilot
-        </button>
-      </section>
-
-      <section className="mt-9">
-        <div className="flex items-end justify-between">
-          <div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted-foreground)]">Quick actions</p><h2 className="mt-1 text-xl font-semibold tracking-tight">Start documentation</h2></div>
-          <button className="text-sm font-medium text-[var(--primary)]" onClick={() => router.push("/templates")}>View all templates</button>
-        </div>
-        <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {quickTemplates.map((template) => (
-            <button className="group rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5 text-left shadow-[var(--shadow-card)] transition hover:-translate-y-1 hover:border-[var(--primary)]/30 hover:shadow-lg" key={template.id} onClick={() => openTemplate(template.id)}>
-              <span className="grid size-11 place-items-center rounded-xl bg-[var(--primary-soft)] text-[var(--primary)]"><ProductIcon className="size-5" name={template.icon} /></span>
-              <h3 className="mt-4 font-semibold">{template.name}</h3>
-              <p className="mt-1.5 text-xs leading-5 text-[var(--muted-foreground)]">{template.description}</p>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section className="mt-9">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted-foreground)]">Documentation statistics</p>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {[
-            { label: "Documentation generated today", value: String(product.history.filter((note) => new Date(note.createdAt).toDateString() === new Date().toDateString()).length || 7), icon: FileText, hint: "2 more than yesterday" },
-            { label: "Time saved", value: "38 min", icon: TimerReset, hint: "Estimated today" },
-            { label: "Favorite documentation", value: String(product.favorites.length || 5), icon: Heart, hint: "Ready to reuse" },
-            { label: "Recent activity", value: String(product.history.length || 12), icon: Clock3, hint: "Last 7 days" },
-          ].map((stat) => (
-            <Card key={stat.label}><CardContent><div className="flex items-start justify-between"><div><p className="text-xs text-[var(--muted-foreground)]">{stat.label}</p><p className="mt-3 text-3xl font-semibold tracking-[-0.04em]">{stat.value}</p><p className="mt-2 text-[11px] text-[var(--muted-foreground)]">{stat.hint}</p></div><stat.icon className="size-5 text-[var(--primary)]" /></div></CardContent></Card>
-          ))}
-        </div>
-      </section>
-    </>
-  );
+const professions = ["Nurse", "Physician", "Nurse Practitioner", "CNA", "Dietitian", "Pharmacist", "Physical Therapist", "Occupational Therapist", "Respiratory Therapist", "Speech Therapist", "Social Worker", "Home Health"];
+export default function LandingPage() {
+  return <PublicPage><main><section className="relative overflow-hidden"><div className="absolute inset-x-0 top-0 -z-10 h-[34rem] bg-[radial-gradient(circle_at_70%_20%,var(--primary-soft),transparent_55%)]"/><div className="mx-auto grid max-w-7xl items-center gap-12 px-5 py-20 lg:grid-cols-[1.08fr_.92fr] lg:px-8 lg:py-28"><div><p className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--card)] px-3 py-1.5 text-xs font-semibold text-[var(--primary)]"><Sparkles className="size-3.5"/>AI clinical documentation copilot</p><h1 className="mt-6 max-w-3xl text-5xl font-semibold leading-[1.02] tracking-[-0.055em] md:text-6xl">Spend less time documenting. Stay focused on care.</h1><p className="mt-6 max-w-2xl text-lg leading-8 text-[var(--muted-foreground)]">Turn clinical facts into clear, structured drafts for your profession—without changing how you work.</p><div className="mt-8 flex flex-wrap gap-3"><Link href="/signup" className="inline-flex h-12 items-center gap-2 rounded-xl bg-[var(--primary)] px-6 font-semibold text-white">Start using ShiftNote <ArrowRight className="size-4"/></Link><Link href="/login" className="inline-flex h-12 items-center rounded-xl border border-[var(--border)] bg-[var(--card)] px-6 font-semibold">Log in</Link></div><p className="mt-4 text-xs text-[var(--muted-foreground)]">AI-generated drafts require clinician review and attestation before use.</p></div><div className="rounded-[30px] border border-[var(--border)] bg-[var(--card)] p-5 shadow-2xl"><div className="rounded-2xl bg-[var(--primary)] p-6 text-white"><p className="text-xs text-white/70">Current template</p><p className="mt-1 font-semibold">Skilled Nursing Note</p><div className="mt-7 rounded-xl bg-white/10 p-4 text-sm leading-6 text-white/85">Patient alert and oriented. Pain reassessed after intervention. Education reviewed with patient and caregiver…</div></div><div className="mt-4 flex items-center gap-3 rounded-2xl border border-[var(--border)] p-4 text-sm text-[var(--muted-foreground)]"><MessageSquareText className="size-5 text-[var(--primary)]"/>Describe the clinical facts or send a voice recording</div></div></div></section><section id="features" className="border-y border-[var(--border)] bg-[var(--card)]"><div className="mx-auto max-w-7xl px-5 py-20 lg:px-8"><div className="max-w-2xl"><p className="text-xs font-semibold uppercase tracking-[.16em] text-[var(--primary)]">Built for clinical workflow</p><h2 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">From facts to a documentation-ready draft</h2></div><div className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-4">{[[WandSparkles,"Mode-aware AI","Language and structure tailored to your role."],[FileCheck2,"Clinical templates","Focused formats for common documentation tasks."],[Clock3,"Faster drafts","Type or record facts and get a structured response."],[LockKeyhole,"You stay in control","Review, edit, and attest every generated note."]].map(([Icon,title,text])=><article className="rounded-2xl border border-[var(--border)] bg-[var(--background)] p-6" key={String(title)}><Icon className="size-6 text-[var(--primary)]"/><h3 className="mt-5 font-semibold">{String(title)}</h3><p className="mt-2 text-sm leading-6 text-[var(--muted-foreground)]">{String(text)}</p></article>)}</div></div></section><section id="professions" className="mx-auto max-w-7xl px-5 py-20 lg:px-8"><div className="grid gap-10 lg:grid-cols-[.8fr_1.2fr]"><div><Stethoscope className="size-7 text-[var(--primary)]"/><h2 className="mt-5 text-3xl font-semibold tracking-tight">Documentation that speaks your professional language</h2><p className="mt-4 leading-7 text-[var(--muted-foreground)]">Choose a mode and ShiftNote adapts its terminology, templates, and draft structure.</p></div><div className="grid gap-3 sm:grid-cols-2">{professions.map(p=><div className="flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-3 text-sm font-medium" key={p}><Check className="size-4 text-[var(--primary)]"/>{p}</div>)}</div></div></section><section className="mx-auto max-w-7xl px-5 pb-20 lg:px-8"><div className="rounded-[30px] bg-[var(--primary)] px-7 py-12 text-center text-white md:px-12"><h2 className="text-3xl font-semibold">Ready to simplify documentation?</h2><p className="mx-auto mt-3 max-w-xl text-white/75">Create your account, choose your workflow, and start your first clinical draft.</p><Link href="/signup" className="mt-7 inline-flex h-12 items-center rounded-xl bg-white px-6 font-semibold text-[var(--primary)]">Get started</Link></div></section></main></PublicPage>;
 }
+
