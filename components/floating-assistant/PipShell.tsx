@@ -27,6 +27,7 @@ export function PipShell({ children }: { children: React.ReactNode }) {
 
   function selectTemplate(id: string) {
     product.setTemplate(id);
+    product.clearChat(false);
     setView("copilot");
   }
 
@@ -49,7 +50,7 @@ export function PipShell({ children }: { children: React.ReactNode }) {
         {view === "copilot" && <div className="min-h-0 flex-1">{children}</div>}
         {view === "modes" && <MiniList title="Choose Mode">{modes.map((mode) => <button className={cn("flex w-full items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--card)] p-3 text-left text-xs", product.mode.id === mode.id && "border-[var(--primary)] bg-[var(--primary-soft)]")} key={mode.id} onClick={() => { product.setMode(mode.id); setView("copilot"); }}><ProductIcon className="size-4 text-[var(--primary)]" name={mode.icon} /><span className="font-medium">{mode.name}</span></button>)}</MiniList>}
         {view === "templates" && <MiniList title={`${product.mode.name} Templates`}>
-          <button className={cn("flex w-full items-center gap-3 rounded-xl border border-dashed border-[var(--border)] bg-[var(--card)] p-3 text-left text-xs", product.template.id === CUSTOM_TEMPLATE_ID && "border-[var(--primary)] bg-[var(--primary-soft)]")} onClick={() => selectTemplate(CUSTOM_TEMPLATE_ID)}><ProductIcon className="size-4 text-[var(--primary)]" name="FilePlus2" /><span className="font-medium">Custom Template</span></button>
+          <button className={cn("flex w-full items-center gap-3 rounded-xl border border-dashed border-[var(--border)] bg-[var(--card)] p-3 text-left text-xs", product.template.id === CUSTOM_TEMPLATE_ID && "border-[var(--primary)] bg-[var(--primary-soft)]")} onClick={() => selectTemplate(CUSTOM_TEMPLATE_ID)}><ProductIcon className="size-4 text-[var(--primary)]" name="FilePlus2" /><span className="font-medium">★ Custom Template (Recommended)</span></button>
           {getTemplatesForMode(product.mode.id).map((template) => <button className={cn("flex w-full items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--card)] p-3 text-left text-xs", product.template.id === template.id && "border-[var(--primary)] bg-[var(--primary-soft)]")} key={template.id} onClick={() => selectTemplate(template.id)}><ProductIcon className="size-4 text-[var(--primary)]" name={template.icon} /><span className="font-medium">{template.name}</span></button>)}
         </MiniList>}
         {view === "favorites" && <PipFavorites />}

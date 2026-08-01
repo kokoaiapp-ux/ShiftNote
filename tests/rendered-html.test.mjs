@@ -47,9 +47,29 @@ test("template switcher is mode-scoped and clears chat without navigation", asyn
   assert.match(chat, /getTemplatesForMode\(product\.mode\.id\)\.map/);
   assert.match(chat, /selectTemplate\(CUSTOM_TEMPLATE_ID\)/);
   assert.match(chat, /product\.setTemplate\(templateId\)/);
-  assert.match(chat, /product\.clearChat\(\)/);
+  assert.match(chat, /product\.clearChat\(false\)/);
   assert.match(chat, /setTemplatePickerOpen\(false\)/);
   assert.doesNotMatch(chat, /selectTemplate[\s\S]*router\.(?:push|replace)/);
+});
+
+test("new conversations reset to Custom Template and the AI stays documentation-focused", async () => {
+  const [provider, route, chat] = await Promise.all([
+    readFile(new URL("../components/product/ProductProvider.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/chat/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../components/floating-assistant/ChatInterface.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(provider, /useState\(CUSTOM_TEMPLATE_ID\)/);
+  assert.match(provider, /setTemplateId\(CUSTOM_TEMPLATE_ID\)/);
+  assert.match(provider, /clearChat: \(resetTemplate = true\)/);
+  assert.match(route, /scope is strictly healthcare documentation/);
+  assert.match(route, /When the user says add, remove, change, correct, revise, or update/);
+  assert.match(route, /CUSTOM TEMPLATE BEHAVIOR/);
+  assert.match(route, /STRUCTURED TEMPLATE BEHAVIOR/);
+  assert.match(chat, /★ Custom Template/);
+  assert.match(chat, /<textarea aria-label="Message ShiftNote"/);
+  assert.match(chat, /max-h-32/);
+  assert.match(chat, /event\.currentTarget\.form\?\.requestSubmit\(\)/);
 });
 
 test("send validity reacts to controlled text and attachments", async () => {
@@ -66,7 +86,7 @@ test("send validity reacts to controlled text and attachments", async () => {
   assert.match(chat, /console\.info\("Input state updated:", input\)/);
   assert.match(chat, /console\.info\("Send button enabled:", true\)/);
   assert.match(chat, /console\.info\("Message successfully sent:", value\)/);
-  assert.doesNotMatch(chat, /onKey(?:Down|Up|Press).*canSend/s);
+  assert.match(chat, /onChange=\{\(event\) => \{ setInput\(event\.target\.value\)/);
 });
 
 test("MediaRecorder audio is uploaded to OpenAI and inserts the returned transcript", async () => {

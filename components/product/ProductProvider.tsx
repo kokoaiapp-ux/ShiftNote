@@ -3,7 +3,7 @@
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useChat } from "@ai-sdk/react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { getMode, getTemplate, getTemplatesForMode, type ClinicalTemplate, type CustomTemplate, type Mode } from "@/lib/product-data";
+import { CUSTOM_TEMPLATE_ID, getMode, getTemplate, type ClinicalTemplate, type CustomTemplate, type Mode } from "@/lib/product-data";
 
 export type SavedNote = {
   id: string;
@@ -54,14 +54,14 @@ type ProductContextValue = {
   error?: Error;
   sendMessage: (text: string, files?: FileList) => void;
   regenerate: () => void;
-  clearChat: () => void;
+  clearChat: (resetTemplate?: boolean) => void;
 };
 
 const ProductContext = createContext<ProductContextValue | null>(null);
 
 export function ProductProvider({ children }: { children: React.ReactNode }) {
   const [modeId, setModeId] = useState("nurse");
-  const [templateId, setTemplateId] = useState("nurse-skilled-nursing-note");
+  const [templateId, setTemplateId] = useState(CUSTOM_TEMPLATE_ID);
   const [theme, setThemeState] = useState<Theme>("system");
   const [compact, setCompactState] = useState(false);
   const [primaryColor, setPrimaryColorState] = useState("#176b4c");
@@ -74,7 +74,7 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     queueMicrotask(() => {
       setModeId(localStorage.getItem("shiftnote-mode") ?? "nurse");
-      setTemplateId(localStorage.getItem("shiftnote-template") ?? "nurse-skilled-nursing-note");
+      setTemplateId(CUSTOM_TEMPLATE_ID);
       setThemeState((localStorage.getItem("shiftnote-theme") as Theme) ?? "system");
       setCompactState(localStorage.getItem("shiftnote-compact") === "true");
       const storedPrimary = localStorage.getItem("shiftnote-primary-color") ?? "#176b4c";
@@ -114,7 +114,7 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
   const setMode = useCallback((id: string) => {
     setModeId(id);
     const nextModeTemplates = getTemplate(templateId).modeIds.includes(id);
-    if (!nextModeTemplates) setTemplateId(getTemplatesForMode(id)[0]?.id ?? "nurse-skilled-nursing-note");
+    if (!nextModeTemplates) setTemplateId(CUSTOM_TEMPLATE_ID);
   }, [templateId]);
 
   const setTemplate = useCallback((id: string) => {
@@ -256,7 +256,10 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
     error: chat.error,
     sendMessage,
     regenerate: () => void chat.regenerate({ body: { modeId, templateId } }),
-    clearChat: () => chat.setMessages([]),
+    clearChat: (resetTemplate = true) => {
+      chat.setMessages([]);
+      if (resetTemplate) setTemplateId(CUSTOM_TEMPLATE_ID);
+    },
   }), [addFavorite, chat, compact, customTemplates, deleteFavorite, deleteHistory, duplicateFavorite, favorites, history, mode, modeId, primaryColor, recentTemplateIds, saveCustomTemplate, saveToHistory, sendMessage, setCompact, setMode, setPrimaryColor, setTemplate, setTheme, template, templateId, theme, updateFavorite, updateFavoriteWithAI, updateHistoryNote, updateHistoryWithAI]);
 
   return <ProductContext.Provider value={value}>{children}</ProductContext.Provider>;

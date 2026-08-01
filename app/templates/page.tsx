@@ -6,7 +6,7 @@ import { ProductIcon } from "@/components/product/Icon";
 import { useProduct } from "@/components/product/ProductProvider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CUSTOM_TEMPLATE_ID, getTemplatesForMode } from "@/lib/product-data";
+import { getTemplatesForMode } from "@/lib/product-data";
 
 export default function TemplatesPage() {
   const router = useRouter();
@@ -25,7 +25,7 @@ export default function TemplatesPage() {
       <div className="mb-4 rounded-2xl border border-dashed border-[var(--primary)]/40 bg-[var(--primary-soft)] p-5">
         <h2 className="font-semibold">Custom Template</h2>
         <p className="mt-1 text-sm text-[var(--muted-foreground)]">Can&apos;t find the template you need? Describe your documentation naturally and let ShiftNote generate a professional note.</p>
-        <Button className="mt-4" onClick={() => { product.setTemplate(CUSTOM_TEMPLATE_ID); product.clearChat(); router.push("/copilot"); }}>Use Custom Template</Button>
+        <Button className="mt-4" onClick={() => { product.clearChat(); router.push("/copilot"); }}>Use Custom Template</Button>
       </div>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {available.map((template) => (
