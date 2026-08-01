@@ -207,6 +207,25 @@ test("status messages use shared theme-aware accessible styles", async () => {
   }
 });
 
+test("subscription pricing and value messaging stay exact and plan benefits match", async () => {
+  const subscription = await readFile(new URL("../app/subscription/page.tsx", import.meta.url), "utf8");
+  assert.match(subscription, /price: "\$19\.99"/);
+  assert.match(subscription, /price: "\$13\.99"/);
+  assert.match(subscription, /\$83\.94 billed every 6 months/);
+  assert.match(subscription, /Includes a 1 day free trial\./);
+  assert.match(subscription, /Choose Monthly/);
+  assert.match(subscription, /Start 1 Day Free Trial/);
+  assert.match(subscription, /Choose the plan that works best for you/);
+  assert.match(subscription, /Spend less time documenting and more time caring for patients with ShiftNote Pro\./);
+  for (const benefit of [
+    "Save up to 1 hour of documentation with AI",
+    "Access every professional mode",
+    "Unlimited clinical documentation templates",
+    "Edit, regenerate, save, favorite, and organize your documentation",
+  ]) assert.match(subscription, new RegExp(benefit));
+  assert.match(subscription, /benefits\.map/);
+});
+
 function contrastRatio(first, second) {
   const high = Math.max(relativeLuminance(first), relativeLuminance(second));
   const low = Math.min(relativeLuminance(first), relativeLuminance(second));
