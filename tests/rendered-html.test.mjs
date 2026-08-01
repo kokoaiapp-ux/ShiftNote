@@ -212,18 +212,22 @@ test("subscription pricing and value messaging stay exact and plan benefits matc
   assert.match(subscription, /price: "\$19\.99"/);
   assert.match(subscription, /price: "\$13\.99"/);
   assert.match(subscription, /\$83\.94 billed every 6 months/);
-  assert.match(subscription, /Includes a 1 day free trial\./);
+  assert.match(subscription, /Includes a 3 day free trial\./);
+  assert.match(subscription, /Save over 30% compared to paying monthly\./);
   assert.match(subscription, /Choose Monthly/);
-  assert.match(subscription, /Start 1 Day Free Trial/);
+  assert.match(subscription, /Start 3 Day Free Trial/);
   assert.match(subscription, /Choose the plan that works best for you/);
   assert.match(subscription, /Spend less time documenting and more time caring for patients with ShiftNote Pro\./);
   for (const benefit of [
-    "Save up to 1 hour of documentation with AI",
+    "Save up to 1 hour of documentation every shift with AI.",
     "Access every professional mode",
     "Unlimited clinical documentation templates",
     "Edit, regenerate, save, favorite, and organize your documentation",
   ]) assert.match(subscription, new RegExp(benefit));
   assert.match(subscription, /benefits\.map/);
+  assert.match(subscription, /min-h-\[35rem\]/);
+  assert.match(subscription, /mt-auto pt-10/);
+  assert.doesNotMatch(subscription, /1 day free trial/i);
 });
 
 function contrastRatio(first, second) {
