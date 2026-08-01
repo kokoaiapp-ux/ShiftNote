@@ -79,7 +79,7 @@ export default function SubscriptionPage() {
           {plans.map((plan) => {
             const featured = plan.id === "six-month";
             return (
-              <article className={`relative flex min-h-[35rem] rounded-[28px] border bg-[var(--card)] p-7 shadow-lg ${featured ? "border-[var(--primary)] shadow-xl ring-1 ring-[var(--primary)]/15 md:-translate-y-1" : "border-[var(--border)]"}`} key={plan.id}>
+              <article className={`relative flex h-full rounded-[28px] border bg-[var(--card)] p-7 shadow-lg ${featured ? "border-[var(--primary)] shadow-xl ring-1 ring-[var(--primary)]/15 md:-translate-y-1" : "border-[var(--border)]"}`} key={plan.id}>
                 <div className="flex w-full flex-col">
                   {"badge" in plan && <span className="absolute right-5 top-5 rounded-full bg-[var(--primary-soft)] px-3 py-1 text-xs font-semibold text-[var(--primary)]">{plan.badge}</span>}
                   <h2 className="text-lg font-semibold">{plan.name}</h2>
@@ -90,7 +90,7 @@ export default function SubscriptionPage() {
                   <ul className="mt-7 space-y-3 text-sm">
                     {benefits.map((benefit) => <li className="flex gap-2" key={benefit}><Check className="mt-0.5 size-4 shrink-0 text-[var(--primary)]" />{benefit}</li>)}
                   </ul>
-                  <div className="mt-auto pt-10">
+                  <div className="mt-auto pt-7">
                     <button disabled={Boolean(busy)} onClick={() => void buy(plan.id)} className={`h-12 w-full rounded-xl font-semibold disabled:opacity-60 ${featured ? "bg-[var(--primary)] text-white shadow-md" : "border border-[var(--primary)] bg-[var(--card)] text-[var(--primary)]"}`}>
                       {busy === plan.id ? "Opening secure checkout…" : plan.button}
                     </button>

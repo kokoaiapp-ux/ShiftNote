@@ -225,8 +225,9 @@ test("subscription pricing and value messaging stay exact and plan benefits matc
     "Edit, regenerate, save, favorite, and organize your documentation",
   ]) assert.match(subscription, new RegExp(benefit));
   assert.match(subscription, /benefits\.map/);
-  assert.match(subscription, /min-h-\[35rem\]/);
-  assert.match(subscription, /mt-auto pt-10/);
+  assert.doesNotMatch(subscription, /min-h-\[35rem\]/);
+  assert.match(subscription, /relative flex h-full/);
+  assert.match(subscription, /mt-auto pt-7/);
   assert.doesNotMatch(subscription, /1 day free trial/i);
 });
 
