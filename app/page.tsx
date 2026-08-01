@@ -32,7 +32,7 @@ export default function DashboardPage() {
 
       <section className="mt-9">
         <div className="flex items-end justify-between">
-          <div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted-foreground)]">Quick actions</p><h2 className="mt-1 text-xl font-semibold tracking-tight">Start a note</h2></div>
+          <div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted-foreground)]">Quick actions</p><h2 className="mt-1 text-xl font-semibold tracking-tight">Start documentation</h2></div>
           <button className="text-sm font-medium text-[var(--primary)]" onClick={() => router.push("/templates")}>View all templates</button>
         </div>
         <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -50,9 +50,9 @@ export default function DashboardPage() {
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted-foreground)]">Documentation statistics</p>
         <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[
-            { label: "Notes generated today", value: String(product.history.filter((note) => new Date(note.createdAt).toDateString() === new Date().toDateString()).length || 7), icon: FileText, hint: "2 more than yesterday" },
+            { label: "Documentation generated today", value: String(product.history.filter((note) => new Date(note.createdAt).toDateString() === new Date().toDateString()).length || 7), icon: FileText, hint: "2 more than yesterday" },
             { label: "Time saved", value: "38 min", icon: TimerReset, hint: "Estimated today" },
-            { label: "Favorite notes", value: String(product.favorites.length || 5), icon: Heart, hint: "Ready to reuse" },
+            { label: "Favorite documentation", value: String(product.favorites.length || 5), icon: Heart, hint: "Ready to reuse" },
             { label: "Recent activity", value: String(product.history.length || 12), icon: Clock3, hint: "Last 7 days" },
           ].map((stat) => (
             <Card key={stat.label}><CardContent><div className="flex items-start justify-between"><div><p className="text-xs text-[var(--muted-foreground)]">{stat.label}</p><p className="mt-3 text-3xl font-semibold tracking-[-0.04em]">{stat.value}</p><p className="mt-2 text-[11px] text-[var(--muted-foreground)]">{stat.hint}</p></div><stat.icon className="size-5 text-[var(--primary)]" /></div></CardContent></Card>

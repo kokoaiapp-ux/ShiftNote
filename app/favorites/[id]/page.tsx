@@ -37,7 +37,7 @@ export default function FavoriteEditorPage() {
       await product.updateFavoriteWithAI(favorite!.id, newInformation.trim());
       setNewInformation("");
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Unable to update the note.");
+      setError(caught instanceof Error ? caught.message : "Unable to update the documentation.");
     } finally {
       setIsUpdating(false);
     }
@@ -51,7 +51,7 @@ export default function FavoriteEditorPage() {
         <section className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5">
           <label className="text-xs font-medium text-[var(--muted-foreground)]" htmlFor="favorite-name">Favorite name</label>
           <input className="mt-2 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-sm font-semibold outline-none focus:border-[var(--primary)]" id="favorite-name" onChange={(event) => product.updateFavorite(favorite.id, { favoriteName: event.target.value })} value={favorite.favoriteName || favorite.title} />
-          <div className="mt-5 flex items-center justify-between"><label className="text-xs font-medium text-[var(--muted-foreground)]" htmlFor="favorite-note">Saved note</label><span aria-live="polite" className="flex items-center gap-1 text-[11px] font-medium text-[var(--foreground)]"><Save className="size-3" /> Auto-saved</span></div>
+          <div className="mt-5 flex items-center justify-between"><label className="text-xs font-medium text-[var(--muted-foreground)]" htmlFor="favorite-note">Saved documentation</label><span aria-live="polite" className="flex items-center gap-1 text-[11px] font-medium text-[var(--foreground)]"><Save className="size-3" /> Auto-saved</span></div>
           <textarea className="mt-2 min-h-[480px] w-full resize-y rounded-xl border border-[var(--border)] bg-[var(--background)] p-4 text-sm leading-7 outline-none focus:border-[var(--primary)]" id="favorite-note" onChange={(event) => product.updateFavorite(favorite.id, { preview: event.target.value })} value={favorite.preview} />
         </section>
         <aside className="space-y-4">
@@ -62,7 +62,7 @@ export default function FavoriteEditorPage() {
           </div>
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5">
             <h2 className="font-semibold">Update with AI</h2>
-            <p className="mt-1 text-xs leading-5 text-[var(--muted-foreground)]">Only this action sends the existing note, new information, mode, and template to the AI.</p>
+            <p className="mt-1 text-xs leading-5 text-[var(--muted-foreground)]">Only this action sends the existing documentation, new information, mode, and template to the AI.</p>
             <div className="relative mt-4">
               <textarea className="min-h-36 w-full resize-y rounded-xl border border-[var(--border)] bg-[var(--background)] p-3 pr-11 text-sm leading-6 outline-none focus:border-[var(--primary)]" onChange={(event) => setNewInformation(event.target.value)} placeholder="Describe only what changed…" value={newInformation} />
               {speech.isSupported ? <button aria-label={speech.isListening ? "Stop dictation" : "Start dictation"} className={`absolute bottom-3 right-3 grid size-8 place-items-center rounded-lg ${speech.isListening ? "animate-pulse bg-[var(--primary-soft)] text-[var(--primary)]" : "bg-[var(--muted)] text-[var(--muted-foreground)]"}`} disabled={speech.isTranscribing} onClick={() => { if (!speech.isListening) speechBaseRef.current = newInformation.trim(); void speech.toggleListening(); }}><Mic className="size-4" /></button> : <span className="absolute bottom-3 right-3 text-[var(--muted-foreground)]" title="Voice input is not supported in this browser"><Mic className="size-4 opacity-60" /></span>}

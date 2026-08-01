@@ -12,9 +12,9 @@ export default function FavoritesPage() {
   const product = useProduct();
   return (
     <>
-      <PageHeader eyebrow="Saved documentation" title="Favorites" description="Favorites are complete generated notes stored locally. Opening or editing one never makes an AI request." />
+      <PageHeader eyebrow="Saved documentation" title="Favorites" description="Favorites contain complete generated documentation stored locally. Opening or editing an item never makes an AI request." />
       {product.favorites.length === 0 ? (
-        <div className="grid min-h-80 place-items-center rounded-3xl border border-dashed border-[var(--border)]"><div className="text-center"><Heart className="mx-auto size-8 text-[var(--muted-foreground)]" /><h2 className="mt-4 font-semibold">No favorite notes yet</h2><p className="mt-2 text-sm text-[var(--muted-foreground)]">Favorite a generated note from the copilot to save its complete content here.</p></div></div>
+        <div className="grid min-h-80 place-items-center rounded-3xl border border-dashed border-[var(--border)]"><div className="text-center"><Heart className="mx-auto size-8 text-[var(--muted-foreground)]" /><h2 className="mt-4 font-semibold">No favorite documentation yet</h2><p className="mt-2 text-sm text-[var(--muted-foreground)]">Favorite generated documentation from the copilot to save its complete content here.</p></div></div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {product.favorites.map((note) => (

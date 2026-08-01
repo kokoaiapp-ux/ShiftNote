@@ -12,7 +12,7 @@ export default function HistoryDetailPage() {
   const router = useRouter();
   const product = useProduct();
   const note = product.history.find((item) => item.id === id);
-  if (!note) return <div className="grid min-h-80 place-items-center"><Link className="text-sm text-[var(--primary)]" href="/history">History item not found · Go back</Link></div>;
+  if (!note) return <div className="grid min-h-80 place-items-center"><Link className="text-sm text-[var(--primary)]" href="/history">Saved documentation was not found · Go back</Link></div>;
   return (
     <>
       <Link className="mb-5 inline-flex items-center gap-2 text-sm text-[var(--muted-foreground)] hover:text-[var(--primary)]" href="/history"><ArrowLeft className="size-4" /> History</Link>

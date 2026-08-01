@@ -24,7 +24,7 @@ export default function TemplatesPage() {
       <PageHeader eyebrow={`${product.mode.name} mode`} title="Documentation templates" description="Each template includes five professional starting scenarios. Choose one and the copilot will ask only for the clinical facts needed to customize it." />
       <div className="mb-4 rounded-2xl border border-dashed border-[var(--primary)]/40 bg-[var(--primary-soft)] p-5">
         <h2 className="font-semibold">Custom Template</h2>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">Can&apos;t find the template you need? Describe your documentation naturally and let ShiftNote generate a professional note.</p>
+        <p className="mt-1 text-sm text-[var(--muted-foreground)]">Can&apos;t find the template you need? Describe your needs naturally and let ShiftNote generate professional clinical documentation.</p>
         <Button className="mt-4" onClick={() => { product.clearChat(); router.push("/copilot"); }}>Use Custom Template</Button>
       </div>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

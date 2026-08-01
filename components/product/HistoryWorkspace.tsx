@@ -55,7 +55,7 @@ export function HistoryWorkspace({ noteId, compact = false, onDeleted }: { noteI
     };
   }, [flushPending]);
 
-  if (!note) return <p className="rounded-xl border border-dashed border-[var(--border)] p-5 text-center text-sm text-[var(--muted-foreground)]">History note not found.</p>;
+  if (!note) return <p className="rounded-xl border border-dashed border-[var(--border)] p-5 text-center text-sm text-[var(--muted-foreground)]">Saved documentation was not found.</p>;
 
   function scheduleSave(changes: Partial<Pick<SavedNote, "preview" | "attachments" | "pendingInformation">>) {
     setSaveStatus("saving");
@@ -92,7 +92,7 @@ export function HistoryWorkspace({ noteId, compact = false, onDeleted }: { noteI
       setNewInformation("");
       setSaveStatus("saved");
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Unable to update this note.");
+      setError(caught instanceof Error ? caught.message : "Unable to update this documentation.");
     } finally {
       setIsUpdating(false);
     }
@@ -144,7 +144,7 @@ export function HistoryWorkspace({ noteId, compact = false, onDeleted }: { noteI
           <Button onClick={() => navigator.clipboard.writeText(draft)} size="sm" variant="ghost"><Copy className="size-3.5" />Copy</Button>
           <Button onClick={() => saveNow()} size="sm" variant="ghost"><Save className="size-3.5" />Save</Button>
           <Button onClick={addFavorite} size="sm" variant="ghost"><Star className="size-3.5" />Favorite</Button>
-          <Button onClick={() => product.saveCustomTemplate({ modeId: note.modeId, name: note.title, description: "Created from a saved history note", content: draft })} size="sm" variant="ghost"><FilePlus2 className="size-3.5" />Template</Button>
+          <Button onClick={() => product.saveCustomTemplate({ modeId: note.modeId, name: note.title, description: "Created from saved documentation", content: draft })} size="sm" variant="ghost"><FilePlus2 className="size-3.5" />Template</Button>
           <Button onClick={() => product.saveToHistory({ ...note, id: crypto.randomUUID(), title: `${note.title} copy`, preview: draft, createdAt: new Date().toISOString(), lastUpdated: new Date().toISOString() })} size="sm" variant="ghost"><CopyPlus className="size-3.5" />Duplicate</Button>
           <label className="inline-flex h-9 cursor-pointer items-center rounded-lg px-3 text-xs font-medium hover:bg-[var(--muted)]">Attach<input accept=".pdf,.doc,.docx,.txt,image/*" className="hidden" multiple onChange={(event) => { void addAttachments(event.target.files); event.target.value = ""; }} type="file" /></label>
           <Button onClick={() => { product.deleteHistory(note.id); onDeleted?.(); }} size="sm" variant="ghost"><Trash2 className="size-3.5" />Delete</Button>
@@ -163,7 +163,7 @@ export function HistoryWorkspace({ noteId, compact = false, onDeleted }: { noteI
             }} size="sm" variant={speech.isListening ? "default" : "outline"}><Mic className="size-3.5" />{speech.isTranscribing ? "Transcribing…" : speech.isListening ? "Stop" : voiceStarted ? "Continue" : "Voice"}</Button>
             {voiceStarted && <Button onClick={() => { speech.cancel(); setNewInformation(voiceBaseRef.current); setVoiceStarted(false); }} size="sm" variant="ghost">Cancel</Button>}
           </div>
-          {(error || speech.error) && <StatusMessage className="mt-2" title="Unable to update note" variant="error">{error || speech.error}</StatusMessage>}
+          {(error || speech.error) && <StatusMessage className="mt-2" title="Unable to update documentation" variant="error">{error || speech.error}</StatusMessage>}
           <Button className="mt-3 w-full" disabled={!newInformation.trim() || isUpdating || speech.isListening || speech.isTranscribing} onClick={updateWithAI}><Sparkles className="size-4" />{isUpdating ? "Updating…" : "Update with AI"}</Button>
         </section>
         <section className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4">

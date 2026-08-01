@@ -197,7 +197,7 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
   }, []);
   const updateHistoryWithAI = useCallback(async (id: string, newInformation: string, existingNote?: string) => {
     const note = history.find((item) => item.id === id);
-    if (!note) throw new Error("History note not found.");
+    if (!note) throw new Error("Saved documentation was not found.");
     const response = await fetch("/api/chat/update", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -205,7 +205,7 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
     });
     if (!response.ok) {
       const payload = await response.json().catch(() => null) as { error?: string } | null;
-      throw new Error(payload?.error ?? "Unable to update the note.");
+      throw new Error(payload?.error ?? "Unable to update the documentation.");
     }
     const updated = await response.text();
     setHistory((items) => {

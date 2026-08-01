@@ -280,7 +280,7 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
             )}
             {latestText && status === "ready" && (
               <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-2">
-                <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--muted-foreground)]">Note actions</p>
+                <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--muted-foreground)]">Documentation actions</p>
                 <div className="flex flex-wrap gap-1">
                   <ActionButton active={actionSuccess === "copy"} icon={Copy} label="Copy" successLabel="Copied" onClick={copyNote} />
                   <ActionButton active={actionSuccess === "save"} icon={Save} label="Save" successLabel="Saved" onClick={() => { product.saveToHistory(makeNote()); showSuccess("save"); }} />
@@ -342,7 +342,7 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
           {recordingPhase === "idle" && (speech.isSupported ? <button aria-label="Start voice input" className="grid size-10 shrink-0 place-items-center rounded-xl text-[var(--muted-foreground)] transition hover:bg-[var(--muted)]" onClick={startRecording} type="button"><Mic className="size-[18px]" /></button> : <span className="grid size-10 place-items-center text-[var(--muted-foreground)]" title="Voice input is not supported in this browser"><Mic className="size-[18px] opacity-60" /></span>)}
           <button aria-label="Send message" className="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--primary)] text-white disabled:opacity-[0.65]" disabled={!canSend} type="submit"><Send className="size-4" /></button>
         </form>
-        <p className="mt-2 text-center text-[10px] text-[var(--muted-foreground)]">Review and attest every AI-generated note before clinical use.</p>
+        <p className="mt-2 text-center text-[10px] text-[var(--muted-foreground)]">Review and attest all AI-generated documentation before clinical use.</p>
       </div>
       {templateDialogOpen && (
         <div className="absolute inset-0 z-50 grid place-items-center bg-black/35 p-4 backdrop-blur-sm">

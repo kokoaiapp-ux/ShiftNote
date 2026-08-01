@@ -14,7 +14,7 @@ export default function HistoryPage() {
     <>
       <PageHeader eyebrow="Recent work" title="History" description="Review saved documentation locally. Opening, viewing, and duplicating history never contacts the AI." />
       {product.history.length === 0 ? (
-        <div className="grid min-h-80 place-items-center rounded-3xl border border-dashed border-[var(--border)]"><div className="text-center"><p className="font-semibold">No saved notes yet</p><p className="mt-2 text-sm text-[var(--muted-foreground)]">Saved copilot output will appear here with its mode and template context.</p></div></div>
+        <div className="grid min-h-80 place-items-center rounded-3xl border border-dashed border-[var(--border)]"><div className="text-center"><p className="font-semibold">No saved documentation yet</p><p className="mt-2 text-sm text-[var(--muted-foreground)]">Saved copilot output will appear here with its mode and template context.</p></div></div>
       ) : (
         <div className="space-y-3">
           {product.history.map((note) => (
@@ -25,7 +25,7 @@ export default function HistoryPage() {
               <p className="truncate text-xs text-[var(--muted-foreground)]">{note.preview}</p>
               <div className="flex gap-1">
                 <Link className="inline-flex h-9 items-center rounded-lg border border-[var(--border)] px-3 text-sm font-medium hover:bg-[var(--muted)]" href={`/history/${note.id}`}>Open / Edit</Link>
-                <Button aria-label="Copy note" onClick={() => navigator.clipboard.writeText(note.preview)} size="icon" variant="ghost"><Copy className="size-4" /></Button>
+                <Button aria-label="Copy documentation" onClick={() => navigator.clipboard.writeText(note.preview)} size="icon" variant="ghost"><Copy className="size-4" /></Button>
                 <Button aria-label="Duplicate" onClick={() => product.saveToHistory({ ...note, id: crypto.randomUUID(), title: `${note.title} copy`, favoriteName: `${note.favoriteName || note.title} copy`, createdAt: new Date().toISOString(), lastUpdated: new Date().toISOString() })} size="icon" variant="ghost"><CopyPlus className="size-4" /></Button>
                 <Button aria-label="Delete" onClick={() => product.deleteHistory(note.id)} size="icon" variant="ghost"><Trash2 className="size-4" /></Button>
               </div>

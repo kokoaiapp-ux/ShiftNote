@@ -72,6 +72,28 @@ test("new conversations reset to Custom Template and the AI stays documentation-
   assert.match(chat, /event\.currentTarget\.form\?\.requestSubmit\(\)/);
 });
 
+test("professional modes and generic UI use clinical documentation terminology", async () => {
+  const [data, route, updateRoute, chat, dashboard, favorites, history] = await Promise.all([
+    readFile(new URL("../lib/product-data.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/chat/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/chat/update/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../components/floating-assistant/ChatInterface.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/favorites/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/history/page.tsx", import.meta.url), "utf8"),
+  ]);
+  for (const mode of ["nursing", "physician", "nurse practitioner", "pharmacy", "physical therapy", "respiratory therapy", "occupational therapy", "nutrition", "CNA", "social work", "home health"]) {
+    assert.match(data, new RegExp(`your ${mode} documentation assistant`, "i"));
+  }
+  assert.match(route, /final documentation/);
+  assert.match(route, /Do not use dash based lists/);
+  assert.match(updateRoute, /complete updated documentation/);
+  assert.match(chat, /Documentation actions/);
+  assert.match(dashboard, /Start documentation/);
+  assert.match(favorites, /generated documentation/);
+  assert.match(history, /No saved documentation yet/);
+});
+
 test("send validity reacts to controlled text and attachments", async () => {
   const chat = await readFile(
     new URL("../components/floating-assistant/ChatInterface.tsx", import.meta.url),

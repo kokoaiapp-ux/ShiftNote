@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   } = await request.json();
 
   if (!existingNote?.trim() || !newInformation?.trim() || !modeId || !templateId) {
-    return Response.json({ error: "Existing note, new information, mode, and template are required." }, { status: 400 });
+    return Response.json({ error: "Existing documentation, new information, mode, and template are required." }, { status: 400 });
   }
 
   const mode = getMode(modeId);
@@ -34,12 +34,13 @@ export async function POST(request: Request) {
   const result = streamText({
     model: openai(process.env.OPENAI_MODEL),
     temperature: 0.1,
-    system: `You update existing clinical documentation; you do not generate an unrelated replacement.
+    system: `You update existing clinical documentation and do not generate an unrelated replacement.
 Professional mode: ${mode.name}. Use only ${mode.terminology}.
 Document type: ${template.name}.
 Preserve accurate existing content, incorporate only the supplied new information, and do not invent facts.
-Return only the complete updated note with no preamble or commentary.`,
-    prompt: `EXISTING NOTE:
+Use natural professional writing and do not use dash based lists.
+Return only the complete updated documentation with no preamble or commentary.`,
+    prompt: `EXISTING DOCUMENTATION:
 ${existingNote}
 
 NEW INFORMATION:
