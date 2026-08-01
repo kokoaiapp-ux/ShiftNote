@@ -19,7 +19,7 @@ type Props = {
   floating: boolean;
 };
 
-const MAX_RECORDING_SECONDS = 300;
+const MAX_RECORDING_SECONDS = 150;
 type RecordingPhase = "idle" | "recording" | "paused" | "transcribing";
 
 export function messageText(message?: UIMessage) {

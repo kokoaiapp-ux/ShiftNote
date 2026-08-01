@@ -148,6 +148,9 @@ test("MediaRecorder audio is uploaded to OpenAI and inserts the returned transcr
   assert.match(chat, /No microphone signal detected/);
   assert.match(chat, /speech\.transcribeRecording\(\)/);
   assert.match(chat, /onSend\(transcript/);
+  assert.match(chat, /const MAX_RECORDING_SECONDS = 150/);
+  assert.match(chat, /next >= MAX_RECORDING_SECONDS/);
+  assert.match(chat, /stopSpeechListening\("maximum-duration"\)/);
 });
 
 test("history, favorites, auto-save, manual save, and AI update paths remain wired", async () => {
