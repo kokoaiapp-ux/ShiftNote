@@ -234,6 +234,23 @@ test("subscription pricing and value messaging stay exact and plan benefits matc
   assert.doesNotMatch(subscription, /1 day free trial/i);
 });
 
+test("unconfigured authentication supports the temporary preview navigation flow", async () => {
+  const [authCard, authProvider, onboarding, subscription] = await Promise.all([
+    readFile(new URL("../components/auth/AuthCard.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/auth/AuthProvider.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/onboarding/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/subscription/page.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(authCard, /if \(auth\.configured\) await action\(\)/);
+  assert.match(authCard, /noValidate=\{!auth\.configured\}/);
+  assert.match(authCard, /required=\{auth\.configured\}/);
+  assert.match(authCard, /mode === "signup" \? "\/onboarding"/);
+  assert.match(authCard, /params\.get\("returnTo"\) \|\| "\/dashboard"/);
+  assert.match(authProvider, /if \(!firebaseConfigured\) return/);
+  assert.match(onboarding, /router\.push\("\/subscription"\)/);
+  assert.match(subscription, /if \(!auth\.configured\)[\s\S]*router\.push\("\/dashboard"\)/);
+});
+
 function contrastRatio(first, second) {
   const high = Math.max(relativeLuminance(first), relativeLuminance(second));
   const low = Math.min(relativeLuminance(first), relativeLuminance(second));

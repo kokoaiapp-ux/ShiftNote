@@ -38,6 +38,10 @@ export default function SubscriptionPage() {
 
   async function buy(planId: string) {
     setMessage("");
+    if (!auth.configured) {
+      router.push("/dashboard");
+      return;
+    }
     if (!auth.user) {
       router.push("/login?returnTo=/subscription");
       return;
