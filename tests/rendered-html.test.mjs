@@ -150,7 +150,15 @@ test("MediaRecorder audio is uploaded to OpenAI and inserts the returned transcr
   assert.match(chat, /onSend\(transcript/);
   assert.match(chat, /const MAX_RECORDING_SECONDS = 150/);
   assert.match(chat, /next >= MAX_RECORDING_SECONDS/);
-  assert.match(chat, /stopSpeechListening\("maximum-duration"\)/);
+  assert.match(chat, /stopSpeechListening\("maximum-duration", false\)/);
+  assert.match(chat, /\.then\(\(\) => setRecordingPhase\("paused"\)\)/);
+  assert.doesNotMatch(chat, /setRecordingPhase\("transcribing"\);\s*void stopSpeechListening\("maximum-duration"/);
+});
+
+test("PIP opens at the wider default size", async () => {
+  const pip = await readFile(new URL("../hooks/useDocumentPip.ts", import.meta.url), "utf8");
+  assert.match(pip, /width: 680/);
+  assert.match(pip, /height: 760/);
 });
 
 test("history, favorites, auto-save, manual save, and AI update paths remain wired", async () => {

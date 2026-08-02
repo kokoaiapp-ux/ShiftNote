@@ -32,7 +32,7 @@ export function useDocumentPip() {
     }
 
     const pipWindow = await api.requestWindow({
-      width: 560,
+      width: 680,
       height: 760,
       preferInitialWindowPlacement: true,
     });

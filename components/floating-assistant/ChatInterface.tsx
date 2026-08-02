@@ -89,8 +89,7 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
       setRecordingSeconds(Math.min(next, MAX_RECORDING_SECONDS));
       if (next >= MAX_RECORDING_SECONDS) {
         window.clearInterval(timer);
-        setRecordingPhase("transcribing");
-        void stopSpeechListening("maximum-duration");
+        void stopSpeechListening("maximum-duration", false).then(() => setRecordingPhase("paused"));
       }
     }, 250);
     return () => window.clearInterval(timer);
