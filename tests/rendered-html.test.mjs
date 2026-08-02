@@ -290,11 +290,14 @@ test("subscription flow gates the primary paywall, preserves the discount until 
   assert.match(subscription, /flow\.stage === "post-onboarding"/);
   assert.match(subscription, /markPrimaryPaywallPurchased\(\)/);
   assert.match(discount, /40% OFF/);
-  assert.match(discount, /Limited Today/i);
-  assert.match(discount, /6-Month ShiftNote Pro/);
+  assert.match(discount, /Limited Offer Today/i);
+  assert.match(discount, />ShiftNote Pro</);
+  assert.doesNotMatch(discount, />6-Month ShiftNote Pro</);
   assert.doesNotMatch(discount, /first-time offer|one-time offer|first-time ShiftNote|new users/i);
   assert.match(discount, /\$11\.99/);
-  assert.match(discount, /Billed \$71\.94 today/);
+  assert.match(discount, /Billed \$71\.94 every 6 months/);
+  assert.match(discount, /This limited price is only available if you subscribe today\./);
+  assert.match(discount, /Spend less time documenting with today&apos;s limited savings\./);
   assert.match(discount, /Unlock 40% Savings/);
   assert.match(discount, /aria-label="Close discount offer"/);
   assert.match(discount, /function dismiss\(\) \{ trackPaywallEvent\("discount_dismissed"\); router\.push\("\/dashboard"\); \}/);
