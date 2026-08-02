@@ -160,6 +160,11 @@ test("PIP opens at the wider default size", async () => {
   const pip = await readFile(new URL("../hooks/useDocumentPip.ts", import.meta.url), "utf8");
   assert.match(pip, /width: 680/);
   assert.match(pip, /height: 760/);
+  assert.match(pip, /colorSchemeMeta\.name = "color-scheme"/);
+  assert.match(pip, /themeColorMeta\.name = "theme-color"/);
+  assert.match(pip, /style\.colorScheme = isDark \? "dark" : "light"/);
+  assert.match(pip, /themeColorMeta\.content = background/);
+  assert.match(pip, /new MutationObserver\(syncPipTheme\)/);
 });
 
 test("history, favorites, auto-save, manual save, and AI update paths remain wired", async () => {

@@ -40,23 +40,37 @@ export function useDocumentPip() {
     pipWindowRef.current = pipWindow;
     pipWindow.document.title = "ShiftNote Assistant";
     pipWindow.document.documentElement.lang = "en";
-    pipWindow.document.documentElement.className = document.documentElement.className;
-    pipWindow.document.documentElement.dataset.compact = document.documentElement.dataset.compact ?? "false";
-    pipWindow.document.documentElement.style.cssText = document.documentElement.style.cssText;
+    const colorSchemeMeta = pipWindow.document.createElement("meta");
+    colorSchemeMeta.name = "color-scheme";
+    pipWindow.document.head.appendChild(colorSchemeMeta);
+    const themeColorMeta = pipWindow.document.createElement("meta");
+    themeColorMeta.name = "theme-color";
+    pipWindow.document.head.appendChild(themeColorMeta);
+
+    const syncPipTheme = () => {
+      const isDark = document.documentElement.classList.contains("dark");
+      const background = isDark ? "#101513" : "#f6f8f7";
+      pipWindow.document.documentElement.className = document.documentElement.className;
+      pipWindow.document.documentElement.dataset.compact = document.documentElement.dataset.compact ?? "false";
+      pipWindow.document.documentElement.style.cssText = document.documentElement.style.cssText;
+      pipWindow.document.documentElement.style.colorScheme = isDark ? "dark" : "light";
+      pipWindow.document.body.style.colorScheme = isDark ? "dark" : "light";
+      pipWindow.document.body.style.backgroundColor = background;
+      colorSchemeMeta.content = isDark ? "dark" : "light";
+      themeColorMeta.content = background;
+    };
+
     pipWindow.document.body.style.margin = "0";
     pipWindow.document.body.style.minHeight = "100vh";
     copyStylesToPipWindow(document, pipWindow.document);
+    syncPipTheme();
 
     const root = pipWindow.document.createElement("div");
     root.id = "shiftnote-pip-root";
     root.style.height = "100vh";
     pipWindow.document.body.appendChild(root);
 
-    const themeObserver = new MutationObserver(() => {
-      pipWindow.document.documentElement.className = document.documentElement.className;
-      pipWindow.document.documentElement.dataset.compact = document.documentElement.dataset.compact ?? "false";
-      pipWindow.document.documentElement.style.cssText = document.documentElement.style.cssText;
-    });
+    const themeObserver = new MutationObserver(syncPipTheme);
     themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "data-compact", "style"] });
 
     const handlePageHide = () => {
