@@ -152,6 +152,7 @@ test("MediaRecorder audio is uploaded to OpenAI and inserts the returned transcr
   assert.match(chat, /next >= MAX_RECORDING_SECONDS/);
   assert.match(chat, /stopSpeechListening\("maximum-duration", false\)/);
   assert.match(chat, /\.then\(\(\) => setRecordingPhase\("paused"\)\)/);
+  assert.match(chat, /recordingSeconds < MAX_RECORDING_SECONDS && <button[\s\S]*>Continue<\/button>/);
   assert.doesNotMatch(chat, /setRecordingPhase\("transcribing"\);\s*void stopSpeechListening\("maximum-duration"/);
 });
 

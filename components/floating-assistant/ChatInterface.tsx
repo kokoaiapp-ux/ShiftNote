@@ -325,7 +325,7 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
             </>}
             {recordingPhase === "paused" && <>
               <button className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--primary)]/30 bg-[var(--card)] px-3 py-2 font-semibold text-[var(--primary)] hover:bg-[var(--primary-soft)]" onClick={() => void toggleRecordingPreview()} type="button">{isPreviewPlaying ? <Pause className="size-3 fill-current" /> : <Play className="size-3 fill-current" />}{isPreviewPlaying ? "Pause" : "Preview"}</button>
-              <button className="rounded-lg bg-[var(--primary)] px-3 py-2 font-semibold text-white shadow-sm hover:brightness-95" onClick={continueRecording} type="button">Continue</button>
+              {recordingSeconds < MAX_RECORDING_SECONDS && <button className="rounded-lg bg-[var(--primary)] px-3 py-2 font-semibold text-white shadow-sm hover:brightness-95" onClick={continueRecording} type="button">Continue</button>}
               <button aria-label="Send voice recording" className="grid size-10 place-items-center rounded-full bg-[var(--primary)] text-white shadow-sm hover:brightness-95 disabled:opacity-60" disabled={isGenerating} onClick={() => void submitRecordingForTranscription()} type="button"><Send className="size-4" /></button>
               <button className="rounded-lg border border-[var(--primary)]/30 bg-[var(--card)] px-3 py-2 font-semibold text-[var(--primary)] hover:bg-[var(--primary-soft)]" onClick={cancelRecording} type="button">Cancel</button>
             </>}
