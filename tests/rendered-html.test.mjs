@@ -297,7 +297,7 @@ test("subscription flow gates the primary paywall, preserves the discount until 
   assert.match(discount, /\$11\.99/);
   assert.match(discount, /Billed \$71\.94 every 6 months/);
   assert.match(discount, /This limited price is only available if you subscribe today\./);
-  assert.match(discount, /Spend less time documenting with today&apos;s limited savings\./);
+  assert.match(discount, /Spend less time documenting with today&apos;s limited offer\./);
   assert.match(discount, /Unlock 40% Savings/);
   assert.match(discount, /aria-label="Close discount offer"/);
   assert.match(discount, /function dismiss\(\) \{ trackPaywallEvent\("discount_dismissed"\); router\.push\("\/dashboard"\); \}/);
