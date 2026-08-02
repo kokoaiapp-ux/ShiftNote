@@ -265,37 +265,46 @@ test("unconfigured authentication supports the temporary preview navigation flow
   assert.match(subscription, /if \(!auth\.configured\)[\s\S]*router\.push\("\/dashboard"\)/);
 });
 
-test("first-time subscription flow is one-time, staged, dismissible only on discount, and tracked", async () => {
-  const [flow, subscription, discount, signup, chrome, shell, env] = await Promise.all([
+test("subscription flow gates the primary paywall, preserves the discount until a primary purchase, and is tracked", async () => {
+  const [flow, subscription, discount, signup, chrome, shell, settings, pipSettings, env] = await Promise.all([
     readFile(new URL("../lib/first-time-flow.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/subscription/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/discount/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/signup/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/public/PublicChrome.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/product/AppShell.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/settings/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/floating-assistant/PipShell.tsx", import.meta.url), "utf8"),
     readFile(new URL("../.env.example", import.meta.url), "utf8"),
   ]);
-  assert.match(flow, /hasSeenFirstTimeDiscount/);
+  assert.match(flow, /hasPurchasedPrimaryPaywall/);
   assert.match(flow, /shiftnote-onboarding-complete/);
-  assert.match(flow, /localStorage\.setItem\(FIRST_TIME_DISCOUNT_FLAG, "true"\)/);
+  assert.match(flow, /localStorage\.setItem\(PRIMARY_PAYWALL_PURCHASE_FLAG, "true"\)/);
   assert.match(flow, /shiftnote:analytics/);
   for (const event of ["paywall_view", "discount_view", "purchase_started", "purchase_completed", "purchase_failed", "paywall_declined", "discount_dismissed"]) assert.match(flow, new RegExp(event));
   assert.match(subscription, /stage === "entry"/);
   assert.match(subscription, /Continue through onboarding/);
-  assert.match(subscription, /Maybe later/);
+  assert.doesNotMatch(subscription, /Maybe later|Skip|Not Now/);
   assert.match(subscription, /router\.push\("\/discount"\)/);
-  assert.doesNotMatch(subscription, /aria-label="Close/);
+  assert.match(subscription, /aria-label="View discount offer"/);
+  assert.match(subscription, /flow\.stage === "post-onboarding"/);
+  assert.match(subscription, /markPrimaryPaywallPurchased\(\)/);
   assert.match(discount, /40% OFF/);
-  assert.match(discount, /Limited first-time offer/);
+  assert.match(discount, /Limited Today/i);
+  assert.match(discount, /6-Month ShiftNote Pro/);
+  assert.doesNotMatch(discount, /first-time offer|one-time offer|first-time ShiftNote|new users/i);
   assert.match(discount, /\$11\.99/);
   assert.match(discount, /Billed \$71\.94 today/);
   assert.match(discount, /Unlock 40% Savings/);
   assert.match(discount, /aria-label="Close discount offer"/);
-  assert.match(discount, /completeFirstTimeFlow\(\); router\.push\("\/dashboard"\)/);
+  assert.match(discount, /function dismiss\(\) \{ trackPaywallEvent\("discount_dismissed"\); router\.push\("\/dashboard"\); \}/);
+  assert.doesNotMatch(discount, /markPrimaryPaywallPurchased|completeFirstTimeFlow/);
   assert.match(signup, /isFirstTimeFlowPending/);
   assert.match(chrome, /subscription\?flow=first-time&stage=entry/);
   assert.match(chrome, /a\[href="\/signup"\]/);
   assert.match(shell, /"\/discount"/);
+  for (const label of ["Subscription", "Contact Support", "Privacy Policy", "Terms of Service"]) assert.match(settings, new RegExp(label));
+  for (const label of ["Contact Support", "Privacy Policy", "Terms of Service"]) assert.doesNotMatch(pipSettings, new RegExp(label));
   assert.match(env, /NEXT_PUBLIC_REVENUECAT_DISCOUNT_PACKAGE_ID=first_time_discount/);
 });
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { Check, Moon, Monitor, Sun } from "lucide-react";
+import Link from "next/link";
+import { Check, ChevronRight, CreditCard, FileText, Mail, Moon, Monitor, Shield, Sun } from "lucide-react";
 import { PageHeader } from "@/components/product/PageHeader";
 import { useProduct } from "@/components/product/ProductProvider";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,6 +18,12 @@ export default function SettingsPage() {
         <Card><CardContent><div className="flex items-center justify-between gap-5"><div><h2 className="font-semibold">Compact mode</h2><p className="mt-1 text-xs text-[var(--muted-foreground)]">Reduce spacing to show more information at once.</p></div><button aria-pressed={product.compact} className={cn("relative h-7 w-12 rounded-full bg-[var(--muted)] transition", product.compact && "bg-[var(--primary)]")} onClick={() => product.setCompact(!product.compact)}><span className={cn("absolute left-1 top-1 size-5 rounded-full bg-white shadow transition", product.compact && "translate-x-5")} /></button></div></CardContent></Card>
         <Card><CardContent><h2 className="font-semibold">Primary color</h2><p className="mt-1 text-xs text-[var(--muted-foreground)]">Updates buttons, links, icons, selections, focus states, and copilot accents instantly.</p><div className="mt-4 flex gap-3">{["#176b4c", "#2563eb", "#7c3aed", "#a94720"].map((color, index) => <button aria-label={`Use primary color ${index + 1}`} aria-pressed={product.primaryColor === color} className={cn("size-9 rounded-full border-4 border-[var(--card)] shadow transition hover:scale-110", product.primaryColor === color && "ring-2 ring-[var(--primary)] ring-offset-2 ring-offset-[var(--card)]")} key={color} onClick={() => product.setPrimaryColor(color)} style={{ backgroundColor: color }} />)}</div></CardContent></Card>
         <Card><CardContent><h2 className="font-semibold">Language</h2><p className="mt-1 text-xs text-[var(--muted-foreground)]">English (US) · More languages coming soon.</p></CardContent></Card>
+        <Card><CardContent><h2 className="font-semibold">Account and support</h2><div className="mt-4 divide-y divide-[var(--border)]">{[
+          { label: "Subscription", href: "/subscription", icon: CreditCard },
+          { label: "Contact Support", href: "mailto:support@shiftnote.app", icon: Mail },
+          { label: "Privacy Policy", href: "/privacy", icon: Shield },
+          { label: "Terms of Service", href: "/terms", icon: FileText },
+        ].map((item) => <Link className="flex min-h-14 items-center gap-3 py-3 text-sm font-medium hover:text-[var(--primary)]" href={item.href} key={item.label}><item.icon className="size-4 text-[var(--primary)]" /><span className="flex-1">{item.label}</span><ChevronRight className="size-4 text-[var(--muted-foreground)]" /></Link>)}</div></CardContent></Card>
       </div>
     </>
   );
