@@ -258,11 +258,45 @@ test("unconfigured authentication supports the temporary preview navigation flow
   assert.match(authCard, /if \(auth\.configured\) await action\(\)/);
   assert.match(authCard, /noValidate=\{!auth\.configured\}/);
   assert.match(authCard, /required=\{auth\.configured\}/);
-  assert.match(authCard, /mode === "signup" \? "\/onboarding"/);
+  assert.match(authCard, /mode === "signup" \? \(params\.get\("returnTo"\) \|\| "\/onboarding"\)/);
   assert.match(authCard, /params\.get\("returnTo"\) \|\| "\/dashboard"/);
-  assert.match(authProvider, /if \(!firebaseConfigured\) return/);
+  assert.match(authProvider, /if \(!firebaseConfigured\) \{ markOnboardingComplete\(\); return; \}/);
   assert.match(onboarding, /router\.push\("\/subscription"\)/);
   assert.match(subscription, /if \(!auth\.configured\)[\s\S]*router\.push\("\/dashboard"\)/);
+});
+
+test("first-time subscription flow is one-time, staged, dismissible only on discount, and tracked", async () => {
+  const [flow, subscription, discount, signup, chrome, shell, env] = await Promise.all([
+    readFile(new URL("../lib/first-time-flow.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/subscription/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/discount/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/signup/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/public/PublicChrome.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/product/AppShell.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../.env.example", import.meta.url), "utf8"),
+  ]);
+  assert.match(flow, /hasSeenFirstTimeDiscount/);
+  assert.match(flow, /shiftnote-onboarding-complete/);
+  assert.match(flow, /localStorage\.setItem\(FIRST_TIME_DISCOUNT_FLAG, "true"\)/);
+  assert.match(flow, /shiftnote:analytics/);
+  for (const event of ["paywall_view", "discount_view", "purchase_started", "purchase_completed", "purchase_failed", "paywall_declined", "discount_dismissed"]) assert.match(flow, new RegExp(event));
+  assert.match(subscription, /stage === "entry"/);
+  assert.match(subscription, /Continue through onboarding/);
+  assert.match(subscription, /Maybe later/);
+  assert.match(subscription, /router\.push\("\/discount"\)/);
+  assert.doesNotMatch(subscription, /aria-label="Close/);
+  assert.match(discount, /40% OFF/);
+  assert.match(discount, /Limited first-time offer/);
+  assert.match(discount, /\$11\.99/);
+  assert.match(discount, /Billed \$71\.94 today/);
+  assert.match(discount, /Unlock 40% Savings/);
+  assert.match(discount, /aria-label="Close discount offer"/);
+  assert.match(discount, /completeFirstTimeFlow\(\); router\.push\("\/dashboard"\)/);
+  assert.match(signup, /isFirstTimeFlowPending/);
+  assert.match(chrome, /subscription\?flow=first-time&stage=entry/);
+  assert.match(chrome, /a\[href="\/signup"\]/);
+  assert.match(shell, /"\/discount"/);
+  assert.match(env, /NEXT_PUBLIC_REVENUECAT_DISCOUNT_PACKAGE_ID=first_time_discount/);
 });
 
 function contrastRatio(first, second) {

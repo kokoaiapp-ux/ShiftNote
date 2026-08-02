@@ -22,7 +22,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { mode, template } = useProduct();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const publicRoutes = ["/", "/login", "/signup", "/onboarding", "/subscription", "/privacy", "/terms"];
+  const publicRoutes = ["/", "/login", "/signup", "/onboarding", "/subscription", "/discount", "/privacy", "/terms"];
   if (publicRoutes.includes(pathname)) return <>{children}</>;
 
   const sidebar = (

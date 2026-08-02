@@ -8,6 +8,7 @@ import {
 } from "firebase/auth";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { firebaseAuth, firebaseConfigured, firestore } from "@/lib/firebase";
+import { markOnboardingComplete } from "@/lib/first-time-flow";
 
 type OnboardingData = { profession: string; workplace: string; experience: string; emr: string; documentation: string };
 type AuthContextValue = {
@@ -58,7 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async signInApple() { const { auth } = requireAuth(); const provider = new OAuthProvider("apple.com"); provider.addScope("email"); provider.addScope("name"); const result = await signInWithPopup(auth, provider); await ensureProfile(result.user, { createdAt: serverTimestamp() }); },
     async resetPassword(email) { const { auth } = requireAuth(); await sendPasswordResetEmail(auth, email); },
     async signOut() { const { auth } = requireAuth(); await firebaseSignOut(auth); },
-    async saveOnboarding(data) { if (!firebaseConfigured) return; if (!user) throw new Error("Sign in before saving onboarding."); const { db } = requireAuth(); await setDoc(doc(db, "users", user.uid), { onboarding: data, onboardingComplete: true, updatedAt: serverTimestamp() }, { merge: true }); },
+    async saveOnboarding(data) { if (!firebaseConfigured) { markOnboardingComplete(); return; } if (!user) throw new Error("Sign in before saving onboarding."); const { db } = requireAuth(); await setDoc(doc(db, "users", user.uid), { onboarding: data, onboardingComplete: true, updatedAt: serverTimestamp() }, { merge: true }); markOnboardingComplete(); },
   };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

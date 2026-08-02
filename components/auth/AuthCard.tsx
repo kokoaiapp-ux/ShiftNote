@@ -18,7 +18,7 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
-  const target = mode === "signup" ? "/onboarding" : (params.get("returnTo") || "/dashboard");
+  const target = mode === "signup" ? (params.get("returnTo") || "/onboarding") : (params.get("returnTo") || "/dashboard");
 
   async function run(action: () => Promise<void>, destination = target) {
     setBusy(true);
