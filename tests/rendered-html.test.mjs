@@ -288,6 +288,8 @@ test("subscription flow gates the primary paywall, preserves the discount until 
   assert.match(subscription, /router\.push\("\/discount"\)/);
   assert.match(subscription, /aria-label="View discount offer"/);
   assert.match(subscription, /flow\.stage === "post-onboarding"/);
+  assert.match(subscription, /subscriptionSource === "settings"/);
+  assert.match(settings, /\/subscription\?source=settings/);
   assert.match(subscription, /markPrimaryPaywallPurchased\(\)/);
   assert.match(discount, /40% OFF/);
   assert.match(discount, /Limited Offer Today/i);

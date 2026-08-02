@@ -19,7 +19,7 @@ export default function SettingsPage() {
         <Card><CardContent><h2 className="font-semibold">Primary color</h2><p className="mt-1 text-xs text-[var(--muted-foreground)]">Updates buttons, links, icons, selections, focus states, and copilot accents instantly.</p><div className="mt-4 flex gap-3">{["#176b4c", "#2563eb", "#7c3aed", "#a94720"].map((color, index) => <button aria-label={`Use primary color ${index + 1}`} aria-pressed={product.primaryColor === color} className={cn("size-9 rounded-full border-4 border-[var(--card)] shadow transition hover:scale-110", product.primaryColor === color && "ring-2 ring-[var(--primary)] ring-offset-2 ring-offset-[var(--card)]")} key={color} onClick={() => product.setPrimaryColor(color)} style={{ backgroundColor: color }} />)}</div></CardContent></Card>
         <Card><CardContent><h2 className="font-semibold">Language</h2><p className="mt-1 text-xs text-[var(--muted-foreground)]">English (US) · More languages coming soon.</p></CardContent></Card>
         <Card><CardContent><h2 className="font-semibold">Account and support</h2><div className="mt-4 divide-y divide-[var(--border)]">{[
-          { label: "Subscription", href: "/subscription", icon: CreditCard },
+          { label: "Subscription", href: "/subscription?source=settings", icon: CreditCard },
           { label: "Contact Support", href: "mailto:support@shiftnote.app", icon: Mail },
           { label: "Privacy Policy", href: "/privacy", icon: Shield },
           { label: "Terms of Service", href: "/terms", icon: FileText },

@@ -20,6 +20,7 @@ export default function SubscriptionPage() {
   const router = useRouter();
   const params = useSearchParams();
   const requestedFirstTime = params.get("flow") === "first-time";
+  const subscriptionSource = params.get("source");
   const requestedStage = params.get("stage") === "entry" ? "entry" : "post-onboarding";
   const [flow, setFlow] = useState<{ active: boolean; stage: "entry" | "post-onboarding" } | null>(null);
   const [busy, setBusy] = useState("");
@@ -34,6 +35,11 @@ export default function SubscriptionPage() {
       trackPaywallEvent("paywall_view", { stage: "entry" });
       return;
     }
+    if (subscriptionSource === "settings") {
+      queueMicrotask(() => setFlow({ active: false, stage: "post-onboarding" }));
+      trackPaywallEvent("paywall_view", { stage: "standard", source: "settings" });
+      return;
+    }
     if (hasPurchasedPrimaryPaywall()) {
       queueMicrotask(() => setFlow({ active: false, stage: "post-onboarding" }));
       trackPaywallEvent("paywall_view", { stage: "standard" });
@@ -46,7 +52,7 @@ export default function SubscriptionPage() {
     }
     queueMicrotask(() => setFlow({ active: false, stage: "post-onboarding" }));
     trackPaywallEvent("paywall_view", { stage: "standard" });
-  }, [requestedFirstTime, requestedStage, router]);
+  }, [requestedFirstTime, requestedStage, router, subscriptionSource]);
 
   async function buy(planId: string) {
     setMessage("");
