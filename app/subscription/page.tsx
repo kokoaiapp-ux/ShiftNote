@@ -11,7 +11,7 @@ import { beginFirstTimeFlow, hasCompletedOnboarding, hasPurchasedPrimaryPaywall,
 const benefits = ["Save up to 1 hour of documentation every shift with AI.", "Access every professional mode", "Unlimited clinical documentation templates", "Edit, regenerate, save, favorite, and organize your documentation"] as const;
 const plans = [
   { id: "monthly", name: "Monthly", price: "$19.99", detail: "per month", button: "Choose Monthly" },
-  { id: "six-month", name: "Six Month", price: "$13.99", detail: "per month", billing: "$83.94 billed every 6 months", trial: "Includes a 3 day free trial.", savings: "Save over 30% compared to paying monthly.", badge: "Best Value", button: "Start 3 Day Free Trial" },
+  { id: "six-month", name: "Six Month", price: "$13.99", detail: "per month", billing: "Billed $83.94 every 6 months", trial: "Includes a 3 day free trial.", savings: "Save 30%", badge: "Best Value", button: "Start 3 Day Free Trial" },
 ] as const;
 
 export default function SubscriptionPage() {

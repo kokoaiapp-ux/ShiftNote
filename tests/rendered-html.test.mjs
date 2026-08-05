@@ -228,9 +228,9 @@ test("subscription pricing and value messaging stay exact and plan benefits matc
   const subscription = await readFile(new URL("../app/subscription/page.tsx", import.meta.url), "utf8");
   assert.match(subscription, /price: "\$19\.99"/);
   assert.match(subscription, /price: "\$13\.99"/);
-  assert.match(subscription, /\$83\.94 billed every 6 months/);
+  assert.match(subscription, /Billed \$83\.94 every 6 months/);
   assert.match(subscription, /Includes a 3 day free trial\./);
-  assert.match(subscription, /Save over 30% compared to paying monthly\./);
+  assert.match(subscription, /Save 30%/);
   assert.match(subscription, /Choose Monthly/);
   assert.match(subscription, /Start 3 Day Free Trial/);
   assert.match(subscription, /Choose the plan that works best for you/);
@@ -346,7 +346,10 @@ test("Supabase billing architecture uses RLS, Stripe Portal, Checkout, and Reven
   assert.match(schema, /enable row level security/);
   for (const label of ["Account", "Billing"]) assert.match(settings, new RegExp(label));
   for (const label of ["Thinking about leaving", "Pause Subscription for 1 Month", "You&apos;ll lose access", "Too expensive", "Special Offer"]) assert.match(billing, new RegExp(label));
-  assert.match(billing, /\$59\.94 every 6 months/); assert.match(billing, /Switch to 6 Months \(Save 40%\)/);
+  assert.match(billing, /\$9\.99\/month/); assert.match(billing, /Billed \$59\.94 every 6 months/); assert.match(billing, /Save 50% compared to the monthly plan/);
+  assert.match(billing, /Switch to 6 Months<\/span><span>\(Save 30%\)/);
+  assert.match(billing, /\$13\.99\/month/); assert.match(billing, /Billed \$83\.94 every 6 months/);
+  assert.match(billing, /whitespace-normal/); assert.match(billing, /min-h-12/);
   assert.match(portal, /payment_method_update/); assert.match(portal, /subscription_cancel/);
   assert.match(checkout, /mode: "subscription"/); assert.match(checkout, /client_reference_id: user.id/);
   assert.match(account, /admin.auth.admin.deleteUser/); assert.match(account, /Cancel your active subscription/);
