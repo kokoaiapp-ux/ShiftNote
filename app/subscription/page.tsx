@@ -3,11 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Check, Sparkles, X } from "lucide-react";
-import { Purchases } from "@revenuecat/purchases-js";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Brand, PublicPage } from "@/components/public/PublicChrome";
 import { StatusMessage } from "@/components/ui/status-message";
-import { beginFirstTimeFlow, hasCompletedOnboarding, hasPurchasedPrimaryPaywall, isFirstTimeFlowPending, markPrimaryPaywallPurchased, trackPaywallEvent } from "@/lib/first-time-flow";
+import { beginFirstTimeFlow, hasCompletedOnboarding, hasPurchasedPrimaryPaywall, markPrimaryPaywallPurchased, trackPaywallEvent } from "@/lib/first-time-flow";
 
 const benefits = ["Save up to 1 hour of documentation every shift with AI.", "Access every professional mode", "Unlimited clinical documentation templates", "Edit, regenerate, save, favorite, and organize your documentation"] as const;
 const plans = [
@@ -27,12 +26,16 @@ export default function SubscriptionPage() {
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    const pending = isFirstTimeFlowPending();
     if (requestedFirstTime && requestedStage === "entry") {
       if (hasPurchasedPrimaryPaywall() || hasCompletedOnboarding()) { router.replace("/dashboard"); return; }
       beginFirstTimeFlow();
       queueMicrotask(() => setFlow({ active: true, stage: "entry" }));
       trackPaywallEvent("paywall_view", { stage: "entry" });
+      return;
+    }
+    if (subscriptionSource === "onboarding") {
+      queueMicrotask(() => setFlow({ active: true, stage: "post-onboarding" }));
+      trackPaywallEvent("paywall_view", { stage: "post-onboarding", source: "onboarding" });
       return;
     }
     if (subscriptionSource === "settings") {
@@ -45,11 +48,6 @@ export default function SubscriptionPage() {
       trackPaywallEvent("paywall_view", { stage: "standard" });
       return;
     }
-    if (pending || hasCompletedOnboarding()) {
-      queueMicrotask(() => setFlow({ active: true, stage: "post-onboarding" }));
-      trackPaywallEvent("paywall_view", { stage: "post-onboarding" });
-      return;
-    }
     queueMicrotask(() => setFlow({ active: false, stage: "post-onboarding" }));
     trackPaywallEvent("paywall_view", { stage: "standard" });
   }, [requestedFirstTime, requestedStage, router, subscriptionSource]);
@@ -59,23 +57,16 @@ export default function SubscriptionPage() {
     trackPaywallEvent("purchase_started", { plan: planId, source: flow?.active ? "first-time" : "standard" });
     if (!auth.configured) { if (flow?.active) markPrimaryPaywallPurchased(); trackPaywallEvent("purchase_completed", { plan: planId, mode: "preview" }); router.push("/dashboard"); return; }
     if (!auth.user) { router.push(flow?.active ? "/signup?returnTo=/onboarding" : "/login?returnTo=/subscription"); return; }
-    const apiKey = process.env.NEXT_PUBLIC_REVENUECAT_WEB_API_KEY;
-    if (!apiKey) { setMessage("Subscriptions are not configured yet. Add NEXT_PUBLIC_REVENUECAT_WEB_API_KEY and the package identifiers described in .env.example."); return; }
     setBusy(planId);
     try {
-      const purchases = Purchases.configure({ apiKey, appUserId: auth.user.uid });
-      const offering = (await purchases.getOfferings()).current;
-      if (!offering) throw new Error("No current RevenueCat offering is configured.");
-      const wanted = planId === "monthly" ? (process.env.NEXT_PUBLIC_REVENUECAT_MONTHLY_PACKAGE_ID || "$rc_monthly") : (process.env.NEXT_PUBLIC_REVENUECAT_SIX_MONTH_PACKAGE_ID || "six_month");
-      const rcPackage = offering.availablePackages.find((item) => item.identifier === wanted);
-      if (!rcPackage) throw new Error(`The ${planId} package is not available in the current RevenueCat offering.`);
-      await purchases.purchase({ rcPackage, customerEmail: auth.user.email || undefined });
-      if (flow?.active) markPrimaryPaywallPurchased();
-      trackPaywallEvent("purchase_completed", { plan: planId });
-      router.push("/dashboard");
+      const token = await auth.accessToken();
+      const response = await fetch("/api/billing/checkout", { method: "POST", headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify({ plan: planId === "monthly" ? "monthly" : "six_month" }) });
+      const payload = await response.json() as { url?: string; error?: string };
+      if (!response.ok || !payload.url) throw new Error(payload.error || "Secure checkout is unavailable.");
+      location.assign(payload.url);
     } catch (error) {
       trackPaywallEvent("purchase_failed", { plan: planId });
-      setMessage(error instanceof Error ? error.message : "The purchase could not be completed. Please try again.");
+      setMessage(error instanceof Error ? error.message : "The purchase could not be started. Please try again.");
     } finally { setBusy(""); }
   }
 

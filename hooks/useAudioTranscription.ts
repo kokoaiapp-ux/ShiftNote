@@ -142,7 +142,7 @@ export function useAudioTranscription({ onTranscript, onEnd }: Options) {
       }
       return transcript;
     } catch (caught) {
-      if (cancelledRef.current) return;
+      if (cancelledRef.current) return "";
       const timedOut = controller.signal.aborted && controller.signal.reason === "timeout";
       setError(timedOut
         ? "Transcription timed out. Check your connection and try a shorter recording."

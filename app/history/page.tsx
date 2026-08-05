@@ -26,8 +26,8 @@ export default function HistoryPage() {
               <div className="flex gap-1">
                 <Link className="inline-flex h-9 items-center rounded-lg border border-[var(--border)] px-3 text-sm font-medium hover:bg-[var(--muted)]" href={`/history/${note.id}`}>Open / Edit</Link>
                 <Button aria-label="Copy documentation" onClick={() => navigator.clipboard.writeText(note.preview)} size="icon" variant="ghost"><Copy className="size-4" /></Button>
-                <Button aria-label="Duplicate" onClick={() => product.saveToHistory({ ...note, id: crypto.randomUUID(), title: `${note.title} copy`, favoriteName: `${note.favoriteName || note.title} copy`, createdAt: new Date().toISOString(), lastUpdated: new Date().toISOString() })} size="icon" variant="ghost"><CopyPlus className="size-4" /></Button>
-                <Button aria-label="Delete" onClick={() => product.deleteHistory(note.id)} size="icon" variant="ghost"><Trash2 className="size-4" /></Button>
+                <Button disabled={product.historyReadOnly} aria-label="Duplicate" onClick={() => product.saveToHistory({ ...note, id: crypto.randomUUID(), title: `${note.title} copy`, favoriteName: `${note.favoriteName || note.title} copy`, createdAt: new Date().toISOString(), lastUpdated: new Date().toISOString() })} size="icon" variant="ghost"><CopyPlus className="size-4" /></Button>
+                <Button disabled={product.historyReadOnly} aria-label="Delete" onClick={() => product.deleteHistory(note.id)} size="icon" variant="ghost"><Trash2 className="size-4" /></Button>
               </div>
             </CardContent></Card>
           ))}

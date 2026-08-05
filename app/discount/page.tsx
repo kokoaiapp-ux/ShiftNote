@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, X } from "lucide-react";
-import { Purchases } from "@revenuecat/purchases-js";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Brand } from "@/components/public/PublicChrome";
 import { StatusMessage } from "@/components/ui/status-message";
@@ -23,25 +22,19 @@ export default function DiscountPage() {
   function dismiss() { trackPaywallEvent("discount_dismissed"); router.push("/dashboard"); }
   async function purchase() {
     setMessage("");
-    trackPaywallEvent("purchase_started", { plan: "discount-six-month", source: "discount" });
-    if (!auth.configured) { trackPaywallEvent("purchase_completed", { plan: "discount-six-month", mode: "preview" }); router.push("/dashboard"); return; }
+    trackPaywallEvent("purchase_started", { plan: "promotional-six-month", source: "discount" });
+    if (!auth.configured) { trackPaywallEvent("purchase_completed", { plan: "promotional-six-month", mode: "preview" }); router.push("/dashboard"); return; }
     if (!auth.user) { router.push("/login?returnTo=/discount"); return; }
-    const apiKey = process.env.NEXT_PUBLIC_REVENUECAT_WEB_API_KEY;
-    if (!apiKey) { setMessage("The discount checkout is not configured yet."); return; }
     setBusy(true);
     try {
-      const purchases = Purchases.configure({ apiKey, appUserId: auth.user.uid });
-      const offering = (await purchases.getOfferings()).current;
-      if (!offering) throw new Error("No current RevenueCat offering is configured.");
-      const wanted = process.env.NEXT_PUBLIC_REVENUECAT_DISCOUNT_PACKAGE_ID || "first_time_discount";
-      const rcPackage = offering.availablePackages.find((item) => item.identifier === wanted);
-      if (!rcPackage) throw new Error("The discount package is not available in the current RevenueCat offering.");
-      await purchases.purchase({ rcPackage, customerEmail: auth.user.email || undefined });
-      trackPaywallEvent("purchase_completed", { plan: "discount-six-month" });
-      router.push("/dashboard");
+      const token = await auth.accessToken();
+      const response = await fetch("/api/billing/checkout", { method: "POST", headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify({ plan: "promotional_six_month" }) });
+      const payload = await response.json() as { url?: string; error?: string };
+      if (!response.ok || !payload.url) throw new Error(payload.error || "Secure checkout is unavailable.");
+      location.assign(payload.url);
     } catch (error) {
-      trackPaywallEvent("purchase_failed", { plan: "discount-six-month" });
-      setMessage(error instanceof Error ? error.message : "The purchase could not be completed. Please try again.");
+      trackPaywallEvent("purchase_failed", { plan: "promotional-six-month" });
+      setMessage(error instanceof Error ? error.message : "The purchase could not be started. Please try again.");
     } finally { setBusy(false); }
   }
   if (!ready) return <main className="min-h-screen bg-[var(--background)]" />;

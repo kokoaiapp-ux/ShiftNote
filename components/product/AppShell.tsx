@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Clock3, FileStack, Heart, LayoutDashboard, Menu, MessageSquareText, Settings, Sparkles, Stethoscope, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useProduct } from "./ProductProvider";
 import { FloatingAssistant } from "@/components/floating-assistant/FloatingAssistant";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 const navigation = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -20,10 +21,15 @@ const navigation = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const auth = useAuth();
   const { mode, template } = useProduct();
   const [mobileOpen, setMobileOpen] = useState(false);
   const publicRoutes = ["/", "/login", "/signup", "/onboarding", "/subscription", "/discount", "/privacy", "/terms"];
-  if (publicRoutes.includes(pathname)) return <>{children}</>;
+  const isPublic = publicRoutes.includes(pathname);
+  useEffect(() => { if (!isPublic && auth.configured && !auth.loading && !auth.user) router.replace(`/login?returnTo=${encodeURIComponent(pathname)}`); }, [auth.configured, auth.loading, auth.user, isPublic, pathname, router]);
+  if (isPublic) return <>{children}</>;
+  if (auth.configured && (auth.loading || !auth.user)) return <div className="min-h-screen bg-[var(--background)]" />;
 
   const sidebar = (
     <aside className="flex h-full w-64 flex-col border-r border-[var(--border)] bg-[var(--sidebar)] px-4 py-5">
@@ -75,7 +81,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <p className="text-[10px] text-[var(--muted-foreground)]">Current template</p>
               <p className="max-w-48 truncate text-xs font-medium">{template.name}</p>
             </div>
-            <div className="grid size-9 place-items-center rounded-full bg-[#d6c0a5] text-xs font-semibold text-[#4b3827]">MR</div>
+            <div className="grid size-9 place-items-center rounded-full bg-[#d6c0a5] text-xs font-semibold text-[#4b3827]">{(auth.user?.displayName || auth.user?.email || "SN").split(/\s|@/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("")}</div>
           </div>
         </header>
         <main className="mx-auto max-w-[1440px] p-5 md:p-8">{children}</main>

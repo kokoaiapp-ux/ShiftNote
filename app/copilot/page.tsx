@@ -14,7 +14,7 @@ export default function CopilotPage() {
     <>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <PageHeader eyebrow="AI workspace" title="Clinical Copilot" description="A guided workspace that adapts its vocabulary, questions, and output to your profession and selected documentation format." />
-        <Button className="mb-7" onClick={product.clearChat} variant="outline"><RotateCcw className="size-4" /> New conversation</Button>
+        <Button className="mb-7" onClick={() => product.clearChat()} variant="outline"><RotateCcw className="size-4" /> New conversation</Button>
       </div>
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_280px]">
         <div className="min-h-[700px] overflow-hidden rounded-[26px] border border-[var(--border)] bg-[var(--background)] shadow-[var(--shadow-card)]">

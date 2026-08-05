@@ -4,6 +4,8 @@ import { DefaultChatTransport, type UIMessage } from "ai";
 import { useChat } from "@ai-sdk/react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { CUSTOM_TEMPLATE_ID, getMode, getTemplate, type ClinicalTemplate, type CustomTemplate, type Mode } from "@/lib/product-data";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { requireSupabase } from "@/lib/supabase";
 
 export type SavedNote = {
   id: string;
@@ -38,6 +40,7 @@ type ProductContextValue = {
   recentTemplates: ClinicalTemplate[];
   favorites: SavedNote[];
   history: SavedNote[];
+  historyReadOnly: boolean;
   customTemplates: CustomTemplate[];
   addFavorite: (note: SavedNote) => void;
   deleteFavorite: (id: string) => void;
@@ -60,6 +63,9 @@ type ProductContextValue = {
 const ProductContext = createContext<ProductContextValue | null>(null);
 
 export function ProductProvider({ children }: { children: React.ReactNode }) {
+  const auth = useAuth();
+  const [workspaceLoaded, setWorkspaceLoaded] = useState(false);
+  const [historyReadOnly, setHistoryReadOnly] = useState(false);
   const [modeId, setModeId] = useState("nurse");
   const [templateId, setTemplateId] = useState(CUSTOM_TEMPLATE_ID);
   const [theme, setThemeState] = useState<Theme>("system");
@@ -90,6 +96,34 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  useEffect(() => {
+    if (auth.loading) return;
+    if (!auth.configured || !auth.user) { queueMicrotask(() => setWorkspaceLoaded(true)); return; }
+    let active = true;
+    const userId = auth.user.id;
+    void requireSupabase().from("subscriptions").select("status,entitlement_active").eq("user_id", userId).maybeSingle().then(({ data }) => { if (active) setHistoryReadOnly(Boolean(data && data.status === "expired" && !data.entitlement_active)); });
+    void requireSupabase().from("subscriptions").select("status,entitlement_active").eq("user_id", userId).maybeSingle().then(({ data }) => { if (active) setHistoryReadOnly(Boolean(data && data.status === "expired" && !data.entitlement_active)); });
+    void requireSupabase().from("user_workspaces").select("is_initialized,preferences,favorites,history,custom_templates,recent_templates").eq("user_id", auth.user.id).maybeSingle().then(({ data }) => {
+      if (!active) return;
+      if (data?.is_initialized) {
+        const preferences = (data.preferences || {}) as Record<string, unknown>;
+        setModeId(String(preferences.modeId || localStorage.getItem("shiftnote-mode") || "nurse"));
+        setThemeState((preferences.theme as Theme) || (localStorage.getItem("shiftnote-theme") as Theme) || "system");
+        setCompactState(Boolean(preferences.compact ?? (localStorage.getItem("shiftnote-compact") === "true")));
+        setPrimaryColorState(String(preferences.primaryColor || localStorage.getItem("shiftnote-primary-color") || "#176b4c"));
+        setFavorites((data.favorites as SavedNote[]) || []);
+        setHistory((data.history as SavedNote[]) || []);
+        setCustomTemplates((data.custom_templates as CustomTemplate[]) || []);
+        setRecentTemplateIds((data.recent_templates as Record<string, string[]>) || {});
+      } else {
+        void requireSupabase().from("subscriptions").select("status,entitlement_active").eq("user_id", userId).maybeSingle().then(({ data }) => { if (active) setHistoryReadOnly(Boolean(data && data.status === "expired" && !data.entitlement_active)); });
+    void requireSupabase().from("subscriptions").select("status,entitlement_active").eq("user_id", userId).maybeSingle().then(({ data }) => { if (active) setHistoryReadOnly(Boolean(data && data.status === "expired" && !data.entitlement_active)); });
+    void requireSupabase().from("user_workspaces").upsert({ user_id: userId, preferences: { modeId: localStorage.getItem("shiftnote-mode") || "nurse", theme: localStorage.getItem("shiftnote-theme") || "system", compact: localStorage.getItem("shiftnote-compact") === "true", primaryColor: localStorage.getItem("shiftnote-primary-color") || "#176b4c" }, favorites: JSON.parse(localStorage.getItem("shiftnote-favorites") || "[]"), history: JSON.parse(localStorage.getItem("shiftnote-history") || "[]"), custom_templates: JSON.parse(localStorage.getItem("shiftnote-custom-templates") || "[]"), recent_templates: JSON.parse(localStorage.getItem("shiftnote-recent-templates") || "{}"), is_initialized: true });
+      }
+      setWorkspaceLoaded(true);
+    });
+    return () => { active = false; };
+  }, [auth.configured, auth.loading, auth.user]);
   const mode = getMode(modeId);
   const template = getTemplate(templateId);
 
@@ -103,13 +137,17 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("shiftnote-history", JSON.stringify(history));
     localStorage.setItem("shiftnote-custom-templates", JSON.stringify(customTemplates));
     localStorage.setItem("shiftnote-recent-templates", JSON.stringify(recentTemplateIds));
+    if (workspaceLoaded && auth.configured && auth.user) {
+      const timeout = window.setTimeout(() => { void requireSupabase().from("user_workspaces").upsert({ user_id: auth.user!.id, preferences: { modeId, theme, compact, primaryColor }, favorites, history, custom_templates: customTemplates, recent_templates: recentTemplateIds, is_initialized: true, updated_at: new Date().toISOString() }); }, 350);
+      return () => window.clearTimeout(timeout);
+    }
 
     const root = document.documentElement;
     const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
     root.classList.toggle("dark", isDark);
     root.dataset.compact = String(compact);
     root.style.setProperty("--primary", primaryColor);
-  }, [compact, customTemplates, favorites, history, modeId, primaryColor, recentTemplateIds, templateId, theme]);
+  }, [auth.configured, auth.user, compact, customTemplates, favorites, history, modeId, primaryColor, recentTemplateIds, templateId, theme, workspaceLoaded]);
 
   const setMode = useCallback((id: string) => {
     setModeId(id);
@@ -180,8 +218,9 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
     setFavorites((items) => items.map((item) => item.id === id ? { ...item, preview: updatedNote, lastUpdated: new Date().toISOString() } : item));
     return updatedNote;
   }, [favorites]);
-  const saveToHistory = useCallback((note: SavedNote) => setHistory((items) => [note, ...items]), []);
+  const saveToHistory = useCallback((note: SavedNote) => { if (!historyReadOnly) setHistory((items) => [note, ...items]); }, [historyReadOnly]);
   const updateHistoryNote = useCallback((id: string, changes: Partial<Pick<SavedNote, "title" | "preview" | "attachments" | "pendingInformation">>, source: NoteVersion["source"] = "auto-save") => {
+    if (historyReadOnly) return;
     setHistory((items) => {
       const next = items.map((item) => {
       if (item.id !== id) return item;
@@ -194,8 +233,9 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem("shiftnote-history", JSON.stringify(next));
       return next;
     });
-  }, []);
+  }, [historyReadOnly]);
   const updateHistoryWithAI = useCallback(async (id: string, newInformation: string, existingNote?: string) => {
+    if (historyReadOnly) throw new Error("History is read-only because ShiftNote Pro access has expired.");
     const note = history.find((item) => item.id === id);
     if (!note) throw new Error("Saved documentation was not found.");
     const response = await fetch("/api/chat/update", {
@@ -220,11 +260,11 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
       return next;
     });
     return updated;
-  }, [history]);
+  }, [history, historyReadOnly]);
   const saveCustomTemplate = useCallback((template: Omit<CustomTemplate, "id" | "createdAt">) => {
     setCustomTemplates((items) => [{ ...template, id: crypto.randomUUID(), createdAt: new Date().toISOString() }, ...items]);
   }, []);
-  const deleteHistory = useCallback((id: string) => setHistory((items) => items.filter((item) => item.id !== id)), []);
+  const deleteHistory = useCallback((id: string) => { if (!historyReadOnly) setHistory((items) => items.filter((item) => item.id !== id)); }, [historyReadOnly]);
 
   const value = useMemo<ProductContextValue>(() => ({
     mode,
@@ -240,6 +280,7 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
     recentTemplates: (recentTemplateIds[modeId] ?? []).map(getTemplate),
     favorites,
     history,
+    historyReadOnly,
     customTemplates,
     addFavorite,
     deleteFavorite,
@@ -260,7 +301,7 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
       chat.setMessages([]);
       if (resetTemplate) setTemplateId(CUSTOM_TEMPLATE_ID);
     },
-  }), [addFavorite, chat, compact, customTemplates, deleteFavorite, deleteHistory, duplicateFavorite, favorites, history, mode, modeId, primaryColor, recentTemplateIds, saveCustomTemplate, saveToHistory, sendMessage, setCompact, setMode, setPrimaryColor, setTemplate, setTheme, template, templateId, theme, updateFavorite, updateFavoriteWithAI, updateHistoryNote, updateHistoryWithAI]);
+  }), [addFavorite, chat, compact, customTemplates, deleteFavorite, deleteHistory, duplicateFavorite, favorites, history, historyReadOnly, mode, modeId, primaryColor, recentTemplateIds, saveCustomTemplate, saveToHistory, sendMessage, setCompact, setMode, setPrimaryColor, setTemplate, setTheme, template, templateId, theme, updateFavorite, updateFavoriteWithAI, updateHistoryNote, updateHistoryWithAI]);
 
   return <ProductContext.Provider value={value}>{children}</ProductContext.Provider>;
 }

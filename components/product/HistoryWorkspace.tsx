@@ -134,20 +134,22 @@ export function HistoryWorkspace({ noteId, compact = false, onDeleted }: { noteI
   return (
     <div className={compact ? "space-y-3" : "grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]"}>
       <section className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4">
+        {product.historyReadOnly && <StatusMessage className="mb-3" variant="info">Your subscription has expired. History remains available in read-only mode.</StatusMessage>}
+        {product.historyReadOnly && <StatusMessage className="mb-3" variant="info">Your subscription has expired. History remains available in read-only mode.</StatusMessage>}
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <span className="text-xs font-medium text-[var(--muted-foreground)]">{getMode(note.modeId).name} · {getTemplate(note.templateId).name}</span>
           <span aria-live="polite" className="ml-auto inline-flex items-center gap-1 text-[11px] font-medium text-[var(--foreground)]">{saveStatus === "saving" ? "Saving…" : <><Check className="size-3 text-[var(--primary)]" />Saved</>}</span>
         </div>
-        <textarea className={compact ? "min-h-64 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] p-3 text-xs leading-5 outline-none focus:border-[var(--primary)]" : "min-h-[480px] w-full rounded-xl border border-[var(--border)] bg-[var(--background)] p-4 text-sm leading-7 outline-none focus:border-[var(--primary)]"} onChange={(event) => changeDraft(event.target.value)} value={draft} />
-        {(note.attachments?.length ?? 0) > 0 && <div className="mt-2 flex flex-wrap gap-1.5">{note.attachments?.map((item) => <span className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--primary-soft)] px-2.5 py-1.5 text-[10px] text-[var(--primary)]" key={item.id}>{item.name}<button aria-label={`Remove ${item.name}`} onClick={() => removeAttachment(item.id)}><X className="size-3" /></button></span>)}</div>}
+        <textarea className={compact ? "min-h-64 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] p-3 text-xs leading-5 outline-none focus:border-[var(--primary)]" : "min-h-[480px] w-full rounded-xl border border-[var(--border)] bg-[var(--background)] p-4 text-sm leading-7 outline-none focus:border-[var(--primary)]"} onChange={(event) => changeDraft(event.target.value)} readOnly={product.historyReadOnly} value={draft} />
+        {(note.attachments?.length ?? 0) > 0 && <div className="mt-2 flex flex-wrap gap-1.5">{note.attachments?.map((item) => <span className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--primary-soft)] px-2.5 py-1.5 text-[10px] text-[var(--primary)]" key={item.id}>{item.name}<button disabled={product.historyReadOnly} aria-label={`Remove ${item.name}`} onClick={() => removeAttachment(item.id)}><X className="size-3" /></button></span>)}</div>}
         <div className="mt-3 flex flex-wrap gap-1">
           <Button onClick={() => navigator.clipboard.writeText(draft)} size="sm" variant="ghost"><Copy className="size-3.5" />Copy</Button>
-          <Button onClick={() => saveNow()} size="sm" variant="ghost"><Save className="size-3.5" />Save</Button>
-          <Button onClick={addFavorite} size="sm" variant="ghost"><Star className="size-3.5" />Favorite</Button>
-          <Button onClick={() => product.saveCustomTemplate({ modeId: note.modeId, name: note.title, description: "Created from saved documentation", content: draft })} size="sm" variant="ghost"><FilePlus2 className="size-3.5" />Template</Button>
-          <Button onClick={() => product.saveToHistory({ ...note, id: crypto.randomUUID(), title: `${note.title} copy`, preview: draft, createdAt: new Date().toISOString(), lastUpdated: new Date().toISOString() })} size="sm" variant="ghost"><CopyPlus className="size-3.5" />Duplicate</Button>
-          <label className="inline-flex h-9 cursor-pointer items-center rounded-lg px-3 text-xs font-medium hover:bg-[var(--muted)]">Attach<input accept=".pdf,.doc,.docx,.txt,image/*" className="hidden" multiple onChange={(event) => { void addAttachments(event.target.files); event.target.value = ""; }} type="file" /></label>
-          <Button onClick={() => { product.deleteHistory(note.id); onDeleted?.(); }} size="sm" variant="ghost"><Trash2 className="size-3.5" />Delete</Button>
+          <Button disabled={product.historyReadOnly} onClick={() => saveNow()} size="sm" variant="ghost"><Save className="size-3.5" />Save</Button>
+          <Button disabled={product.historyReadOnly} onClick={addFavorite} size="sm" variant="ghost"><Star className="size-3.5" />Favorite</Button>
+          <Button disabled={product.historyReadOnly} onClick={() => product.saveCustomTemplate({ modeId: note.modeId, name: note.title, description: "Created from saved documentation", content: draft })} size="sm" variant="ghost"><FilePlus2 className="size-3.5" />Template</Button>
+          <Button disabled={product.historyReadOnly} onClick={() => product.saveToHistory({ ...note, id: crypto.randomUUID(), title: `${note.title} copy`, preview: draft, createdAt: new Date().toISOString(), lastUpdated: new Date().toISOString() })} size="sm" variant="ghost"><CopyPlus className="size-3.5" />Duplicate</Button>
+          <label className={product.historyReadOnly ? "hidden" : "inline-flex h-9 cursor-pointer items-center rounded-lg px-3 text-xs font-medium hover:bg-[var(--muted)]"}>Attach<input accept=".pdf,.doc,.docx,.txt,image/*" className="hidden" multiple onChange={(event) => { void addAttachments(event.target.files); event.target.value = ""; }} type="file" /></label>
+          <Button disabled={product.historyReadOnly} onClick={() => { product.deleteHistory(note.id); onDeleted?.(); }} size="sm" variant="ghost"><Trash2 className="size-3.5" />Delete</Button>
         </div>
       </section>
 
@@ -155,21 +157,21 @@ export function HistoryWorkspace({ noteId, compact = false, onDeleted }: { noteI
         <section className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4">
           <h3 className="text-sm font-semibold">Update with AI</h3>
           <p className="mt-1 text-[11px] leading-4 text-[var(--muted-foreground)]">Add only the new information. Existing sections are preserved unless affected.</p>
-          <textarea className="mt-3 min-h-28 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] p-3 text-xs leading-5 outline-none focus:border-[var(--primary)]" onChange={(event) => { setNewInformation(event.target.value); scheduleSave({ pendingInformation: event.target.value }); }} placeholder="Type or dictate additional information…" value={newInformation} />
+          <textarea className="mt-3 min-h-28 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] p-3 text-xs leading-5 outline-none focus:border-[var(--primary)]" onChange={(event) => { setNewInformation(event.target.value); scheduleSave({ pendingInformation: event.target.value }); }} placeholder="Type or dictate additional information…" readOnly={product.historyReadOnly} value={newInformation} />
           <div className="mt-2 flex gap-2">
-            <Button disabled={speech.isTranscribing} onClick={() => {
+            <Button disabled={product.historyReadOnly || speech.isTranscribing} onClick={() => {
               if (speech.isListening) void speech.stopListening();
               else { voiceBaseRef.current = newInformation.trim(); setVoiceStarted(true); void speech.startListening(voiceStarted); }
             }} size="sm" variant={speech.isListening ? "default" : "outline"}><Mic className="size-3.5" />{speech.isTranscribing ? "Transcribing…" : speech.isListening ? "Stop" : voiceStarted ? "Continue" : "Voice"}</Button>
             {voiceStarted && <Button onClick={() => { speech.cancel(); setNewInformation(voiceBaseRef.current); setVoiceStarted(false); }} size="sm" variant="ghost">Cancel</Button>}
           </div>
           {(error || speech.error) && <StatusMessage className="mt-2" title="Unable to update documentation" variant="error">{error || speech.error}</StatusMessage>}
-          <Button className="mt-3 w-full" disabled={!newInformation.trim() || isUpdating || speech.isListening || speech.isTranscribing} onClick={updateWithAI}><Sparkles className="size-4" />{isUpdating ? "Updating…" : "Update with AI"}</Button>
+          <Button className="mt-3 w-full" disabled={product.historyReadOnly || !newInformation.trim() || isUpdating || speech.isListening || speech.isTranscribing} onClick={updateWithAI}><Sparkles className="size-4" />{isUpdating ? "Updating…" : "Update with AI"}</Button>
         </section>
         <section className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4">
           <h3 className="text-sm font-semibold">Version History</h3>
           <div className="mt-3 max-h-48 space-y-1.5 overflow-y-auto">{note.versions?.length ? note.versions.map((item) => <button className="w-full rounded-lg border border-[var(--border)] p-2 text-left text-[10px] hover:bg-[var(--muted)]" key={item.id} onClick={() => setSelectedVersion(item.id)}><span className="font-medium capitalize">{item.source}</span><span className="ml-2 text-[var(--muted-foreground)]">{new Date(item.savedAt).toLocaleString()}</span></button>) : <p className="text-[11px] text-[var(--muted-foreground)]">Previous versions will appear after edits.</p>}</div>
-          {version && <div className="mt-3 rounded-xl bg-[var(--muted)] p-3"><p className="text-[10px] font-semibold">Previous version</p><p className="mt-2 max-h-32 overflow-y-auto whitespace-pre-wrap text-[10px] leading-4 text-[var(--muted-foreground)]">{version.preview}</p><div className="mt-2 flex gap-2"><Button onClick={() => restoreVersion(version.id)} size="sm">Restore</Button><Button onClick={() => setSelectedVersion(null)} size="sm" variant="ghost">Close comparison</Button></div></div>}
+          {version && <div className="mt-3 rounded-xl bg-[var(--muted)] p-3"><p className="text-[10px] font-semibold">Previous version</p><p className="mt-2 max-h-32 overflow-y-auto whitespace-pre-wrap text-[10px] leading-4 text-[var(--muted-foreground)]">{version.preview}</p><div className="mt-2 flex gap-2"><Button disabled={product.historyReadOnly} onClick={() => restoreVersion(version.id)} size="sm">Restore</Button><Button onClick={() => setSelectedVersion(null)} size="sm" variant="ghost">Close comparison</Button></div></div>}
         </section>
       </aside>
     </div>

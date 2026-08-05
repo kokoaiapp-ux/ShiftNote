@@ -260,8 +260,10 @@ test("unconfigured authentication supports the temporary preview navigation flow
   assert.match(authCard, /required=\{auth\.configured\}/);
   assert.match(authCard, /mode === "signup" \? \(params\.get\("returnTo"\) \|\| "\/onboarding"\)/);
   assert.match(authCard, /params\.get\("returnTo"\) \|\| "\/dashboard"/);
-  assert.match(authProvider, /if \(!firebaseConfigured\) \{ markOnboardingComplete\(\); return; \}/);
-  assert.match(onboarding, /router\.push\("\/subscription"\)/);
+  assert.match(authProvider, /if \(!supabaseConfigured\) \{ markOnboardingComplete\(\); return; \}/);
+  assert.match(authProvider, /signInWithPassword/);
+  assert.doesNotMatch(authProvider, /firebase/i);
+  assert.match(onboarding, /router\.push\("\/subscription\?source=onboarding"\)/);
   assert.match(subscription, /if \(!auth\.configured\)[\s\S]*router\.push\("\/dashboard"\)/);
 });
 
@@ -289,6 +291,7 @@ test("subscription flow gates the primary paywall, preserves the discount until 
   assert.match(subscription, /aria-label="View discount offer"/);
   assert.match(subscription, /flow\.stage === "post-onboarding"/);
   assert.match(subscription, /subscriptionSource === "settings"/);
+  assert.match(subscription, /subscriptionSource === "onboarding"/);
   assert.match(settings, /\/subscription\?source=settings/);
   assert.match(subscription, /markPrimaryPaywallPurchased\(\)/);
   assert.match(discount, /40% OFF/);
@@ -310,7 +313,8 @@ test("subscription flow gates the primary paywall, preserves the discount until 
   assert.match(shell, /"\/discount"/);
   for (const label of ["Subscription", "Contact Support", "Privacy Policy", "Terms of Service"]) assert.match(settings, new RegExp(label));
   for (const label of ["Contact Support", "Privacy Policy", "Terms of Service"]) assert.doesNotMatch(pipSettings, new RegExp(label));
-  assert.match(env, /NEXT_PUBLIC_REVENUECAT_DISCOUNT_PACKAGE_ID=first_time_discount/);
+  assert.match(env, /STRIPE_PROMOTIONAL_SIX_MONTH_PRICE_ID=/);
+  assert.match(env, /REVENUECAT_PRO_ENTITLEMENT_ID=pro/);
 });
 
 function contrastRatio(first, second) {
@@ -324,3 +328,29 @@ function relativeLuminance(hex) {
   const [red, green, blue] = channels.map((value) => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
   return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
 }
+
+test("Supabase billing architecture uses RLS, Stripe Portal, Checkout, and RevenueCat entitlement webhooks", async () => {
+  const [schema, settings, billing, portal, checkout, account, stripeWebhook, revenueCatWebhook, product, pkg] = await Promise.all([
+    readFile(new URL("../supabase/migrations/202608040001_initial_shift_note.sql", import.meta.url), "utf8"),
+    readFile(new URL("../app/settings/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/billing/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/billing/portal/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/billing/checkout/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/account/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/webhooks/stripe/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/webhooks/revenuecat/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../components/product/ProductProvider.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../package.json", import.meta.url), "utf8"),
+  ]);
+  for (const table of ["profiles", "user_workspaces", "subscriptions", "cancellation_reasons", "billing_webhook_events"]) assert.match(schema, new RegExp(`create table if not exists public.${table}`));
+  assert.match(schema, /enable row level security/);
+  for (const label of ["Account", "Billing"]) assert.match(settings, new RegExp(label));
+  for (const label of ["Thinking about leaving", "Pause Subscription for 1 Month", "You&apos;ll lose access", "Too expensive", "Special Offer"]) assert.match(billing, new RegExp(label));
+  assert.match(billing, /\$59\.94 every 6 months/); assert.match(billing, /Switch to 6 Months \(Save 40%\)/);
+  assert.match(portal, /payment_method_update/); assert.match(portal, /subscription_cancel/);
+  assert.match(checkout, /mode: "subscription"/); assert.match(checkout, /client_reference_id: user.id/);
+  assert.match(account, /admin.auth.admin.deleteUser/); assert.match(account, /Cancel your active subscription/);
+  assert.match(stripeWebhook, /constructEvent/); assert.match(stripeWebhook, /api.revenuecat.com\/v1\/receipts/);
+  assert.match(revenueCatWebhook, /entitlement_active/); assert.match(revenueCatWebhook, /REVENUECAT_PRO_ENTITLEMENT_ID/);
+  assert.match(product, /user_workspaces/); assert.match(pkg, /@supabase\/supabase-js/); assert.doesNotMatch(pkg, /"firebase"/);
+});
