@@ -25,7 +25,7 @@ export default function DashboardPage() {
         <p className="text-sm text-white/70">Good morning, Maria</p>
         <h1 className="mt-2 max-w-2xl text-3xl font-semibold tracking-[-0.04em] md:text-4xl">Ready to simplify your documentation?</h1>
         <p className="mt-3 max-w-xl text-sm leading-6 text-white/70">Choose a structured workflow or open the copilot and describe the clinical facts in your own words.</p>
-        <button className="mt-7 inline-flex h-11 items-center gap-2 rounded-xl bg-white px-5 text-sm font-semibold text-[var(--primary)] transition hover:-translate-y-0.5" onClick={() => { product.clearChat(); router.push("/copilot"); }}>
+        <button className="mt-7 inline-flex h-11 items-center gap-2 rounded-xl bg-[var(--card)] px-5 text-sm font-semibold shadow-sm transition hover:-translate-y-0.5" onClick={() => { product.clearChat(); router.push("/copilot"); }} style={{ color: "var(--primary-readable)" }}>
           <Sparkles className="size-4" /> Open AI Copilot
         </button>
       </section>

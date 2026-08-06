@@ -23,21 +23,19 @@ async function render(pathname = "/copilot") {
   );
 }
 
-test("server-renders the clinical copilot with the compact template switcher", async () => {
+test("protects the clinical copilot and keeps the compact template switcher wired", async () => {
   const response = await render();
-  assert.equal(response.status, 200);
-  assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
-
-  const html = await response.text();
-  assert.match(html, /ShiftNote AI Clinical Copilot/);
-  assert.match(html, /Current template/i);
-  assert.match(html, /Type or dictate the clinical information you want documented/);
-  assert.match(html, /aria-label="Message ShiftNote"/);
-  assert.match(html, /aria-label="Send message"/);
-  assert.match(html, /aria-label="Select template"/);
-  assert.doesNotMatch(html, /Initial Documentation|Routine Follow-up|Change in Status/);
+  assert.equal(response.status, 307);
+  assert.match(response.headers.get("location") ?? "", /\/login\?returnTo=%2Fcopilot/);
+  const chat = await readFile(new URL("../components/floating-assistant/ChatInterface.tsx", import.meta.url), "utf8");
+  assert.match(chat, /ShiftNote AI Clinical Copilot/);
+  assert.match(chat, /Current template/i);
+  assert.match(chat, /Type or dictate the clinical information you want documented/);
+  assert.match(chat, /aria-label="Message ShiftNote"/);
+  assert.match(chat, /aria-label="Send message"/);
+  assert.match(chat, /aria-label="Select template"/);
+  assert.doesNotMatch(chat, /Initial Documentation|Routine Follow-up|Change in Status/);
 });
-
 test("template switcher is mode-scoped and clears chat without navigation", async () => {
   const chat = await readFile(
     new URL("../components/floating-assistant/ChatInterface.tsx", import.meta.url),
@@ -174,8 +172,9 @@ test("history, favorites, auto-save, manual save, and AI update paths remain wir
     readFile(new URL("../app/favorites/[id]/page.tsx", import.meta.url), "utf8"),
   ]);
 
-  assert.match(provider, /localStorage\.setItem\("shiftnote-history"/);
-  assert.match(provider, /localStorage\.setItem\("shiftnote-favorites"/);
+  assert.match(provider, /persistNote\(requireSupabase\(\)/);
+  assert.match(provider, /addFavoriteRecord\(requireSupabase\(\)/);
+  assert.match(provider, /updateStoredNote\(requireSupabase\(\)/);
   assert.match(provider, /updateHistoryWithAI/);
   assert.match(provider, /updateFavoriteWithAI/);
   assert.match(workspace, /"auto-save"/);
@@ -255,15 +254,25 @@ test("unconfigured authentication supports the temporary preview navigation flow
     readFile(new URL("../app/onboarding/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/subscription/page.tsx", import.meta.url), "utf8"),
   ]);
-  assert.match(authCard, /if \(auth\.configured\) await action\(\)/);
+  assert.match(authCard, /if\(!auth\.configured\)\{router\.push\(target\);return;\}/);
+  assert.match(authCard, /auth\.signInGoogle\(target\)/);
+  assert.match(authCard, /emailConfirmationRequired/);
+  assert.match(authCard, /type="submit"/);
+  assert.match(authCard, /type="button"/);
+  assert.match(authCard, /\/Mac\/i\.test\(platform\)&&navigator\.maxTouchPoints<2/);
+  assert.match(authCard, /showApple&&<button/);
   assert.match(authCard, /noValidate=\{!auth\.configured\}/);
   assert.match(authCard, /required=\{auth\.configured\}/);
   assert.match(authCard, /mode === "signup" \? \(params\.get\("returnTo"\) \|\| "\/onboarding"\)/);
   assert.match(authCard, /params\.get\("returnTo"\) \|\| "\/dashboard"/);
-  assert.match(authProvider, /if \(!supabaseConfigured\) \{ markOnboardingComplete\(\); return; \}/);
+  assert.match(authProvider, /shiftnote-onboarding-draft/);
+  assert.doesNotMatch(authProvider, /from\("profiles"\)\.update/);
   assert.match(authProvider, /signInWithPassword/);
   assert.doesNotMatch(authProvider, /firebase/i);
   assert.match(onboarding, /router\.push\("\/subscription\?source=onboarding"\)/);
+  assert.match(onboarding, /modes\.find\(mode=>mode\.name===updated\.profession\)/);
+  assert.match(onboarding, /localStorage\.setItem\("shiftnote-mode",selectedMode\.id\)/);
+  assert.match(onboarding, /product\.setMode\(selectedMode\.id\)/);
   assert.match(subscription, /if \(!auth\.configured\)[\s\S]*router\.push\("\/dashboard"\)/);
 });
 
@@ -291,6 +300,10 @@ test("subscription flow gates the primary paywall, preserves the discount until 
   assert.match(subscription, /aria-label="View discount offer"/);
   assert.match(subscription, /flow\.stage === "post-onboarding"/);
   assert.match(subscription, /subscriptionSource === "settings"/);
+  assert.match(subscription, /aria-label="Go back"/);
+  assert.match(subscription, /<Brand\/><\/div><\/header><div[^>]*paddingTop:"32px"[^>]*><button aria-label="Go back"/);
+  assert.match(subscription, /subscriptionSource==="settings"\?"\/settings":"\/"/);
+  assert.doesNotMatch(subscription, /<PublicPage>/);
   assert.match(subscription, /subscriptionSource === "onboarding"/);
   assert.match(settings, /\/subscription\?source=settings/);
   assert.match(subscription, /markPrimaryPaywallPurchased\(\)/);
@@ -307,14 +320,18 @@ test("subscription flow gates the primary paywall, preserves the discount until 
   assert.match(discount, /aria-label="Close discount offer"/);
   assert.match(discount, /function dismiss\(\) \{ trackPaywallEvent\("discount_dismissed"\); router\.push\("\/dashboard"\); \}/);
   assert.doesNotMatch(discount, /markPrimaryPaywallPurchased|completeFirstTimeFlow/);
-  assert.match(signup, /isFirstTimeFlowPending/);
+  assert.match(signup, /<AuthCard mode="signup"/);
+  assert.doesNotMatch(signup, /isFirstTimeFlowPending|router\.replace\("\/subscription/);
   assert.match(chrome, /subscription\?flow=first-time&stage=entry/);
   assert.match(chrome, /a\[href="\/signup"\]/);
   assert.match(shell, /"\/discount"/);
+  assert.match(shell, /"\/onboarding"/);
   for (const label of ["Subscription", "Contact Support", "Privacy Policy", "Terms of Service"]) assert.match(settings, new RegExp(label));
   for (const label of ["Contact Support", "Privacy Policy", "Terms of Service"]) assert.doesNotMatch(pipSettings, new RegExp(label));
-  assert.match(env, /STRIPE_PROMOTIONAL_SIX_MONTH_PRICE_ID=/);
-  assert.match(env, /REVENUECAT_PRO_ENTITLEMENT_ID=pro/);
+  assert.match(env, /STRIPE_PROMOTIONAL_SIX_MONTH_DISCOUNT_PRODUCT_ID=/);
+  assert.match(env, /STRIPE_PROMOTIONAL_SIX_MONTH_DISCOUNT_PRICE_ID=/);
+  assert.match(env, /STRIPE_PROMOTIONAL_SIX_MONTH_RETENTION_PRODUCT_ID=/);
+  assert.match(env, /STRIPE_PROMOTIONAL_SIX_MONTH_RETENTION_PRICE_ID=/);
 });
 
 function contrastRatio(first, second) {
@@ -329,9 +346,10 @@ function relativeLuminance(hex) {
   return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
 }
 
-test("Supabase billing architecture uses RLS, Stripe Portal, Checkout, and RevenueCat entitlement webhooks", async () => {
-  const [schema, settings, billing, portal, checkout, account, stripeWebhook, revenueCatWebhook, product, pkg] = await Promise.all([
+test("Supabase billing architecture keeps Stripe billing and synchronizes RevenueCat entitlements", async () => {
+  const [schema, stripeSchema, settings, billing, portal, checkout, account, stripeWebhook, revenueCatWebhook, product, pkg] = await Promise.all([
     readFile(new URL("../supabase/migrations/202608040001_initial_shift_note.sql", import.meta.url), "utf8"),
+    readFile(new URL("../supabase/migrations/202608050003_stripe_billing.sql", import.meta.url), "utf8"),
     readFile(new URL("../app/settings/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/billing/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/billing/portal/route.ts", import.meta.url), "utf8"),
@@ -342,18 +360,33 @@ test("Supabase billing architecture uses RLS, Stripe Portal, Checkout, and Reven
     readFile(new URL("../components/product/ProductProvider.tsx", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
   ]);
-  for (const table of ["profiles", "user_workspaces", "subscriptions", "cancellation_reasons", "billing_webhook_events"]) assert.match(schema, new RegExp(`create table if not exists public.${table}`));
-  assert.match(schema, /enable row level security/);
+  for (const table of ["profiles", "onboarding_answers", "conversations", "messages", "favorites", "custom_templates", "user_preferences", "subscription_cache"]) assert.match(schema, new RegExp(`create table public.${table}`));
+  assert.doesNotMatch(schema, /create table public\.(subscriptions|billing_webhook_events)/);
+  assert.equal((schema.match(/enable row level security/g) || []).length, 8);
+  assert.match(schema, /references auth\.users\(id\) on delete cascade/g);
+  assert.match(schema, /create trigger on_auth_user_created/);
+  assert.match(schema, /create or replace function public\.complete_onboarding/);
+  assert.match(schema, /subscription_cache_select_own/);
+  assert.doesNotMatch(schema, /subscription_cache_(insert|update|delete)_own/);
   for (const label of ["Account", "Billing"]) assert.match(settings, new RegExp(label));
   for (const label of ["Thinking about leaving", "Pause Subscription for 1 Month", "You&apos;ll lose access", "Too expensive", "Special Offer"]) assert.match(billing, new RegExp(label));
   assert.match(billing, /\$9\.99\/month/); assert.match(billing, /Billed \$59\.94 every 6 months/); assert.match(billing, /Save 50% compared to the monthly plan/);
-  assert.match(billing, /Switch to 6 Months<\/span><span>\(Save 30%\)/);
+  assert.match(billing, /Switch to 6 Months<\/span><span>\$13\.99\/month \(Save 30%\)/);
   assert.match(billing, /\$13\.99\/month/); assert.match(billing, /Billed \$83\.94 every 6 months/);
   assert.match(billing, /whitespace-normal/); assert.match(billing, /min-h-12/);
+  assert.doesNotMatch(billing, /RefreshCw/); assert.match(billing, /min-h-11/);
+  assert.match(billing, /text-red-700/); assert.match(billing, /dark:text-red-400/);
+  assert.match(billing, /variant="outline">Cancel Subscription<\/Button>/);
+  assert.match(billing, /function Actions[\s\S]*mt-6 grid gap-3/);
   assert.match(portal, /payment_method_update/); assert.match(portal, /subscription_cancel/);
   assert.match(checkout, /mode: "subscription"/); assert.match(checkout, /client_reference_id: user.id/);
-  assert.match(account, /admin.auth.admin.deleteUser/); assert.match(account, /Cancel your active subscription/);
-  assert.match(stripeWebhook, /constructEvent/); assert.match(stripeWebhook, /api.revenuecat.com\/v1\/receipts/);
-  assert.match(revenueCatWebhook, /entitlement_active/); assert.match(revenueCatWebhook, /REVENUECAT_PRO_ENTITLEMENT_ID/);
-  assert.match(product, /user_workspaces/); assert.match(pkg, /@supabase\/supabase-js/); assert.doesNotMatch(pkg, /"firebase"/);
+  assert.match(account, /admin.auth.admin.deleteUser/); assert.match(account, /cancel_at_period_end: true/);
+  assert.match(account, /stripe\.subscriptions\.search/); assert.match(account, /renewalCanceled/);
+  assert.match(stripeSchema, /create table public\.stripe_customers/);
+  assert.match(stripeSchema, /create table public\.stripe_subscriptions/);
+  assert.match(stripeSchema, /create table public\.stripe_webhook_events/);
+  assert.match(stripeWebhook, /constructEvent/); assert.match(stripeWebhook, /submitStripeSubscription/);
+  assert.match(revenueCatWebhook, /x-revenuecat-webhook-signature/); assert.match(revenueCatWebhook, /syncRevenueCatSubscriber/);
+  assert.match(product, /loadWorkspace\(requireSupabase\(\)/); assert.doesNotMatch(product, /user_workspaces/);
+  assert.match(pkg, /@supabase\/supabase-js/); assert.doesNotMatch(pkg, /"firebase"/);
 });

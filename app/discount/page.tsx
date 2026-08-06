@@ -28,7 +28,7 @@ export default function DiscountPage() {
     setBusy(true);
     try {
       const token = await auth.accessToken();
-      const response = await fetch("/api/billing/checkout", { method: "POST", headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify({ plan: "promotional_six_month" }) });
+      const response = await fetch("/api/billing/checkout", { method: "POST", headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify({ plan: "promotional_six_month_discount" }) });
       const payload = await response.json() as { url?: string; error?: string };
       if (!response.ok || !payload.url) throw new Error(payload.error || "Secure checkout is unavailable.");
       location.assign(payload.url);

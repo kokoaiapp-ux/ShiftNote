@@ -1,12 +1,28 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
-import { getStripe, getSupabaseAdmin } from "@/lib/server/billing";
+import { getStripe, getSupabaseAdmin, syncStripeSubscription } from "@/lib/server/billing";
+import { revenueCatConfigured, submitStripeSubscription } from "@/lib/server/revenuecat";
 
-function planForPrice(priceId: string | null) { if (priceId === process.env.STRIPE_MONTHLY_PRICE_ID) return "monthly"; if (priceId === process.env.STRIPE_PROMOTIONAL_SIX_MONTH_PRICE_ID) return "promotional_six_month"; return "six_month"; }
-async function syncSubscription(subscription: Stripe.Subscription, userId?: string) { const admin = getSupabaseAdmin(); const metadataUser = userId || subscription.metadata.supabase_user_id; if (!metadataUser) return; const firstItem = subscription.items.data[0]; const raw = subscription as unknown as { current_period_end?: number }; const status = subscription.cancel_at_period_end ? "canceling" : subscription.status === "trialing" ? "trial" : subscription.status === "active" ? "active" : "expired"; const customer = typeof subscription.customer === "string" ? subscription.customer : subscription.customer.id; await admin.from("profiles").update({ stripe_customer_id: customer }).eq("id", metadataUser); await admin.from("subscriptions").upsert({ user_id: metadataUser, revenuecat_app_user_id: metadataUser, plan: planForPrice(firstItem?.price.id || null), status, stripe_customer_id: customer, stripe_subscription_id: subscription.id, stripe_price_id: firstItem?.price.id, current_period_end: raw.current_period_end ? new Date(raw.current_period_end * 1000).toISOString() : null, price_cents: firstItem?.price.unit_amount, currency: firstItem?.price.currency || "usd", updated_at: new Date().toISOString() }); }
-export async function POST(request: Request) { const secret = process.env.STRIPE_WEBHOOK_SECRET; if (!secret) return NextResponse.json({ error: "Stripe webhook is not configured." }, { status: 503 }); try { const body = await request.text(); const signature = request.headers.get("stripe-signature"); if (!signature) return NextResponse.json({ error: "Missing signature." }, { status: 400 }); const stripe = getStripe(); const event = stripe.webhooks.constructEvent(body, signature, secret); const admin = getSupabaseAdmin(); const { error: eventError } = await admin.from("billing_webhook_events").insert({ id: event.id, provider: "stripe", event_type: event.type }); if (eventError?.code === "23505") return NextResponse.json({ received: true }); if (eventError) throw eventError;
-    if (event.type === "checkout.session.completed") { const session = event.data.object; const subscriptionId = typeof session.subscription === "string" ? session.subscription : session.subscription?.id; if (subscriptionId) { const subscription = await stripe.subscriptions.retrieve(subscriptionId); const userId = session.client_reference_id || session.metadata?.supabase_user_id || undefined; await syncSubscription(subscription, userId); const rcKey = process.env.REVENUECAT_STRIPE_PUBLIC_API_KEY; if (rcKey && userId) await fetch("https://api.revenuecat.com/v1/receipts", { method: "POST", headers: { Authorization: `Bearer ${rcKey}`, "Content-Type": "application/json", "X-Platform": "stripe" }, body: JSON.stringify({ app_user_id: userId, fetch_token: session.id }) }); } }
-    if (["customer.subscription.created","customer.subscription.updated","customer.subscription.deleted"].includes(event.type)) await syncSubscription(event.data.object as Stripe.Subscription);
+export async function POST(request: Request) {
+  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!secret) return NextResponse.json({ error: "Stripe webhook is not configured." }, { status: 503 });
+  const signature = request.headers.get("stripe-signature");
+  if (!signature) return NextResponse.json({ error: "Missing Stripe signature." }, { status: 400 });
+  let event: Stripe.Event;
+  try { event = getStripe().webhooks.constructEvent(await request.text(), signature, secret); }
+  catch { return NextResponse.json({ error: "Invalid Stripe signature." }, { status: 400 }); }
+  const admin = getSupabaseAdmin();
+  const { error: insertError } = await admin.from("stripe_webhook_events").insert({ id: event.id, event_type: event.type, livemode: event.livemode });
+  if (insertError?.code === "23505") return NextResponse.json({ received: true });
+  if (insertError) return NextResponse.json({ error: "Webhook could not be recorded." }, { status: 500 });
+  try {
+    if (event.type === "checkout.session.completed") { const session = event.data.object; const id = typeof session.subscription === "string" ? session.subscription : session.subscription?.id; if (id) { const row = await syncStripeSubscription(await getStripe().subscriptions.retrieve(id), session.client_reference_id || session.metadata?.supabase_user_id || undefined); if (row && revenueCatConfigured()) await submitStripeSubscription(row.user_id, id).catch((error) => console.error("RevenueCat receipt sync failed", { subscriptionId: id, error })); } }
+    if (["customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted"].includes(event.type)) { const subscription = event.data.object as Stripe.Subscription; const row = await syncStripeSubscription(subscription); if (row && revenueCatConfigured()) await submitStripeSubscription(row.user_id, subscription.id).catch((error) => console.error("RevenueCat receipt sync failed", { subscriptionId: subscription.id, error })); }
+    if (event.type === "customer.deleted") { const customer = event.data.object; await admin.from("stripe_customers").delete().eq("stripe_customer_id", customer.id); }
     return NextResponse.json({ received: true });
-  } catch { return NextResponse.json({ error: "Invalid Stripe webhook." }, { status: 400 }); }
+  } catch (error) {
+    await admin.from("stripe_webhook_events").delete().eq("id", event.id);
+    console.error("Stripe webhook processing failed", { eventId: event.id, type: event.type, error });
+    return NextResponse.json({ error: "Webhook processing failed." }, { status: 500 });
+  }
 }

@@ -1,3 +1,4 @@
+import { requireRevenueCatPro } from "@/lib/server/revenuecat";
 import { convertToModelMessages, streamText, type UIMessage } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { CUSTOM_TEMPLATE_ID, getMode, getTemplate } from "@/lib/product-data";
@@ -29,6 +30,7 @@ Assume all examples should be de-identified.
 Sparse input should still produce the best safe draft possible, with omissions identified rather than invented.`;
 
 export async function POST(request: Request) {
+  try { await requireRevenueCatPro(request); } catch (error) { const code = error instanceof Error ? error.message : ""; return Response.json({ error: code === "PRO_REQUIRED" ? "ShiftNote Pro is required." : "Sign in to use AI Copilot." }, { status: code === "PRO_REQUIRED" ? 403 : 401 }); }
   if (!process.env.OPENAI_API_KEY) {
     return Response.json(
       { error: "AI is not configured. Add OPENAI_API_KEY to .env.local and restart the server." },

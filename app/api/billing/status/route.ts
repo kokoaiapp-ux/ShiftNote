@@ -1,0 +1,3 @@
+import { NextResponse } from "next/server";
+import { billingError, currentSubscription, requireApiUser } from "@/lib/server/billing";
+export async function GET(request: Request) { try { const { admin, user } = await requireApiUser(request); return NextResponse.json({ subscription: await currentSubscription(admin, user.id) }); } catch (error) { const result = billingError(error, "Subscription status is temporarily unavailable."); return NextResponse.json({ error: result.error }, { status: result.status }); } }

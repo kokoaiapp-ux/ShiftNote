@@ -31,6 +31,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.local.example
 
 # vercel
 .vercel
@@ -44,3 +45,6 @@ next-env.d.ts
 /work/
 .dev-server*.log
 *.tsbuildinfo
+
+# local OAuth credentials
+*_oauth_secret.txt

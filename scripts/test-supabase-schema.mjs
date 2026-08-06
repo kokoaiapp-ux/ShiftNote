@@ -1,0 +1,66 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { PGlite } from "@electric-sql/pglite";
+import { pgcrypto } from "@electric-sql/pglite/contrib/pgcrypto";
+
+const db = new PGlite({ extensions: { pgcrypto } });
+const migration = ["202608040001_initial_shift_note.sql", "202608050001_optimize_rls_indexes.sql", "202608050002_profile_onboarding_fields.sql"].map((name) => readFile(new URL(`../supabase/migrations/${name}`, import.meta.url), "utf8"));
+const migrationSql = (await Promise.all(migration)).join("\n");
+const userOne = "11111111-1111-4111-8111-111111111111";
+const userTwo = "22222222-2222-4222-8222-222222222222";
+const conversation = "33333333-3333-4333-8333-333333333333";
+const message = "44444444-4444-4444-8444-444444444444";
+
+await db.exec(`
+  create role anon nologin;
+  create role authenticated nologin;
+  create schema auth;
+  create table auth.users (id uuid primary key, email text, raw_user_meta_data jsonb not null default '{}'::jsonb);
+  create function auth.uid() returns uuid language sql stable as $$
+    select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
+  $$;
+  grant usage on schema auth to authenticated;
+  grant execute on function auth.uid() to authenticated;
+`);
+await db.exec(migrationSql);
+
+await db.query("insert into auth.users (id,email,raw_user_meta_data) values ($1,$2,$3::jsonb),($4,$5,$6::jsonb)", [userOne, "one@example.test", JSON.stringify({ display_name: "User One" }), userTwo, "two@example.test", JSON.stringify({ display_name: "User Two" })]);
+let result = await db.query("select count(*)::int as count from public.profiles");
+assert.equal(result.rows[0].count, 2, "new-user trigger creates profiles");
+result = await db.query("select count(*)::int as count from public.user_preferences");
+assert.equal(result.rows[0].count, 2, "new-user trigger creates preferences");
+
+await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub', '${userOne}', false);`);
+await db.query("select public.complete_onboarding($1::jsonb)", [JSON.stringify({ profession: "Nurse", workplace: "Hospital", experience: "5-10 years", emr: "Epic", documentation: "Progress notes", preferred_default_mode: "nurse" })]);
+result = await db.query("select profession,emr,place_of_work,default_mode from public.profiles");
+assert.equal(result.rows.length, 1, "RLS exposes only the signed-in user's profile");
+assert.deepEqual(result.rows[0], { profession: "Nurse", emr: "Epic", place_of_work: "Hospital", default_mode: "nurse" });
+result = await db.query("select onboarding_completed,emr_platform from public.onboarding_answers");
+assert.deepEqual(result.rows[0], { onboarding_completed: true, emr_platform: "Epic" });
+await db.query("insert into public.conversations (id,user_id,title,selected_mode,selected_template) values ($1,$2,$3,$4,$5)", [conversation, userOne, "Skin Assessment", "nurse", "nurse-skin-assessment"]);
+await db.query("insert into public.messages (id,conversation_id,user_id,role,message) values ($1,$2,$3,'assistant',$4)", [message, conversation, userOne, "Clinical documentation"]);
+await db.query("update public.messages set edited_message=$1 where id=$2", ["Edited clinical documentation", message]);
+await db.query("insert into public.favorites (user_id,message_id) values ($1,$2)", [userOne, message]);
+await db.query("insert into public.custom_templates (user_id,mode,template_name,template_content) values ($1,$2,$3,$4)", [userOne, "nurse", "My Template", "Template body"]);
+await db.query("update public.user_preferences set last_selected_mode='nurse', theme='dark' where user_id=$1", [userOne]);
+result = await db.query("select count(*)::int as count from public.messages");
+assert.equal(result.rows[0].count, 1, "message CRUD succeeds for owner");
+let denied = false;
+try { await db.query("insert into public.conversations (user_id,title,selected_mode,selected_template) values ($1,'Denied','nurse','custom-template')", [userTwo]); } catch { denied = true; }
+assert.equal(denied, true, "RLS denies writes for another user");
+await db.exec("reset role; reset request.jwt.claim.sub;");
+await db.query("insert into public.subscription_cache (user_id,entitlement,subscription_status) values ($1,'pro','active')", [userOne]);
+await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub', '${userOne}', false);`);
+result = await db.query("select entitlement from public.subscription_cache");
+assert.deepEqual(result.rows, [{ entitlement: "pro" }], "subscription cache is readable by its owner");
+denied = false;
+try { await db.query("update public.subscription_cache set subscription_status='expired' where user_id=$1", [userOne]); } catch { denied = true; }
+assert.equal(denied, true, "client cannot mutate the server-owned subscription cache");
+await db.exec("reset role; reset request.jwt.claim.sub;");
+await db.query("delete from auth.users where id=$1", [userOne]);
+for (const table of ["profiles", "onboarding_answers", "conversations", "messages", "favorites", "custom_templates", "user_preferences", "subscription_cache"]) {
+  result = await db.query(`select count(*)::int as count from public.${table} where ${table === "profiles" ? "auth_user_id" : "user_id"}=$1`, [userOne]);
+  assert.equal(result.rows[0].count, 0, `${table} cascades on account deletion`);
+}
+await db.close();
+console.log("Supabase schema migration, triggers, RLS, CRUD, and cascades passed.");

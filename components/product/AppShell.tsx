@@ -25,7 +25,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const auth = useAuth();
   const { mode, template } = useProduct();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const publicRoutes = ["/", "/login", "/signup", "/onboarding", "/subscription", "/discount", "/privacy", "/terms"];
+  const publicRoutes = ["/", "/login", "/signup", "/onboarding", "/subscription", "/discount", "/privacy", "/terms", "/update-password"];
   const isPublic = publicRoutes.includes(pathname);
   useEffect(() => { if (!isPublic && auth.configured && !auth.loading && !auth.user) router.replace(`/login?returnTo=${encodeURIComponent(pathname)}`); }, [auth.configured, auth.loading, auth.user, isPublic, pathname, router]);
   if (isPublic) return <>{children}</>;

@@ -1,0 +1,4 @@
+import { NextResponse } from "next/server";
+import { billingError, requireApiUser } from "@/lib/server/billing";
+import { revenueCatConfigured, syncRevenueCatSubscriber } from "@/lib/server/revenuecat";
+export async function GET(request:Request){try{const{admin,user}=await requireApiUser(request);if(!revenueCatConfigured())return NextResponse.json({configured:false,status:null});return NextResponse.json({configured:true,status:await syncRevenueCatSubscriber(admin,user.id)})}catch(error){const result=billingError(error,"RevenueCat subscription status is unavailable.");return NextResponse.json({error:result.error},{status:result.status})}}

@@ -1,0 +1,4 @@
+import { NextResponse } from "next/server";
+import { billingError, currentSubscription, requireApiUser } from "@/lib/server/billing";
+import { revenueCatConfigured, submitStripeSubscription, syncRevenueCatSubscriber } from "@/lib/server/revenuecat";
+export async function POST(request:Request){try{const{admin,user}=await requireApiUser(request);if(!revenueCatConfigured())return NextResponse.json({error:"Purchase restoration is not configured yet."},{status:503});const subscription=await currentSubscription(admin,user.id);if(subscription?.stripe_subscription_id)await submitStripeSubscription(user.id,subscription.stripe_subscription_id);const status=await syncRevenueCatSubscriber(admin,user.id);return NextResponse.json({ok:true,status})}catch(error){const result=billingError(error,"Purchases could not be restored.");return NextResponse.json({error:result.error},{status:result.status})}}
