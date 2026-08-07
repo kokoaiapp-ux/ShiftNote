@@ -1,16 +1,70 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 import { Clock3, FileText, Heart, Sparkles, TimerReset } from "lucide-react";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { ProductIcon } from "@/components/product/Icon";
 import { useProduct } from "@/components/product/ProductProvider";
 import { Card, CardContent } from "@/components/ui/card";
 import { getQuickActionsForMode } from "@/lib/product-data";
+import { DASHBOARD_METRICS_CHANGED } from "@/lib/dashboard-metrics";
+import { requireSupabase } from "@/lib/supabase";
+
+type DashboardMetrics = { generatedToday: number; generatedYesterday: number; timeSavedMinutes: number; favoriteDocumentation: number; recentActivity: number };
+const emptyMetrics: DashboardMetrics = { generatedToday: 0, generatedYesterday: 0, timeSavedMinutes: 0, favoriteDocumentation: 0, recentActivity: 0 };
+
+function localDateRanges() {
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return {
+    todayStart,
+    tomorrowStart: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1),
+    yesterdayStart: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1),
+    recentStart: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6),
+  };
+}
 
 export default function DashboardPage() {
   const router = useRouter();
+  const auth = useAuth();
   const product = useProduct();
+  const [metrics, setMetrics] = useState<DashboardMetrics>(emptyMetrics);
   const quickTemplates = getQuickActionsForMode(product.mode.id);
+
+  const loadMetrics = useCallback(async () => {
+    if (!auth.user) { setMetrics(emptyMetrics); return; }
+    const { data } = await requireSupabase().auth.getSession();
+    if (!data.session?.access_token) return;
+    const parameters = new URLSearchParams();
+    for (const [name, date] of Object.entries(localDateRanges())) parameters.set(name, date.toISOString());
+    const response = await fetch(`/api/dashboard/metrics?${parameters}`, { headers: { Authorization: `Bearer ${data.session.access_token}` } });
+    if (!response.ok) return;
+    setMetrics(await response.json() as DashboardMetrics);
+  }, [auth.user]);
+
+  useEffect(() => {
+    if (auth.loading) return;
+    queueMicrotask(() => { void loadMetrics(); });
+    const refresh = () => { void loadMetrics(); };
+    const refreshWhenVisible = () => { if (document.visibilityState === "visible") refresh(); };
+    let midnightTimer = 0;
+    const scheduleMidnightRefresh = () => {
+      const { tomorrowStart } = localDateRanges();
+      midnightTimer = window.setTimeout(() => { refresh(); scheduleMidnightRefresh(); }, tomorrowStart.getTime() - Date.now() + 1000);
+    };
+    scheduleMidnightRefresh();
+    window.addEventListener(DASHBOARD_METRICS_CHANGED, refresh);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      window.clearTimeout(midnightTimer);
+      window.removeEventListener(DASHBOARD_METRICS_CHANGED, refresh);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, [auth.loading, loadMetrics]);
+
+  const differenceFromYesterday = metrics.generatedToday - metrics.generatedYesterday;
+  const todayHint = differenceFromYesterday === 0 ? "Same as yesterday" : `${Math.abs(differenceFromYesterday)} ${differenceFromYesterday > 0 ? "more" : "fewer"} than yesterday`;
 
   function openTemplate(id: string) {
     product.setTemplate(id);
@@ -50,10 +104,10 @@ export default function DashboardPage() {
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted-foreground)]">Documentation statistics</p>
         <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[
-            { label: "Documentation generated today", value: String(product.history.filter((note) => new Date(note.createdAt).toDateString() === new Date().toDateString()).length || 7), icon: FileText, hint: "2 more than yesterday" },
-            { label: "Time saved", value: "38 min", icon: TimerReset, hint: "Estimated today" },
-            { label: "Favorite documentation", value: String(product.favorites.length || 5), icon: Heart, hint: "Ready to reuse" },
-            { label: "Recent activity", value: String(product.history.length || 12), icon: Clock3, hint: "Last 7 days" },
+            { label: "Documentation generated today", value: String(metrics.generatedToday), icon: FileText, hint: todayHint },
+            { label: "Time saved", value: `${metrics.timeSavedMinutes} min`, icon: TimerReset, hint: "Estimated today" },
+            { label: "Favorite documentation", value: String(metrics.favoriteDocumentation), icon: Heart, hint: "Ready to reuse" },
+            { label: "Recent activity", value: String(metrics.recentActivity), icon: Clock3, hint: "Last 7 days" },
           ].map((stat) => (
             <Card key={stat.label}><CardContent><div className="flex items-start justify-between"><div><p className="text-xs text-[var(--muted-foreground)]">{stat.label}</p><p className="mt-3 text-3xl font-semibold tracking-[-0.04em]">{stat.value}</p><p className="mt-2 text-[11px] text-[var(--muted-foreground)]">{stat.hint}</p></div><stat.icon className="size-5 text-[var(--primary)]" /></div></CardContent></Card>
           ))}

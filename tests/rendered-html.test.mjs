@@ -109,6 +109,24 @@ test("send validity reacts to controlled text and attachments", async () => {
   assert.match(chat, /onChange=\{\(event\) => \{ setInput\(event\.target\.value\)/);
 });
 
+test("dashboard metrics use authenticated Supabase counts without dummy values", async () => {
+  const [dashboard, route, provider, migration] = await Promise.all([
+    readFile(new URL("../app/dashboard/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/dashboard/metrics/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../components/product/ProductProvider.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../supabase/migrations/202608070001_dashboard_metrics_indexes.sql", import.meta.url), "utf8"),
+  ]);
+  assert.doesNotMatch(dashboard, /length \|\| 7|38 min|length \|\| 5|length \|\| 12/);
+  assert.match(dashboard, /timeSavedMinutes/);
+  assert.match(dashboard, /new Date\(now\.getFullYear\(\), now\.getMonth\(\), now\.getDate\(\)\)/);
+  assert.match(route, /generatedToday \* 5/);
+  assert.match(route, /count: "exact", head: true/);
+  assert.match(route, /\.eq\("user_id", user\.id\)/);
+  assert.match(route, /\.eq\("role", "assistant"\)/);
+  assert.match(provider, /notifyDashboardMetricsChanged/);
+  assert.match(migration, /where role = 'assistant'/);
+});
+
 test("secret credentials remain server-only and sensitive content is not logged", async () => {
   const [chat, recorder, auth, provider, guard] = await Promise.all([
     readFile(new URL("../components/floating-assistant/ChatInterface.tsx", import.meta.url), "utf8"),
