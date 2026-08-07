@@ -46,7 +46,7 @@ export default function SettingsPage() {
           { label: "Account", href: "/account", icon: UserRound },
           { label: "Billing", href: "/billing", icon: WalletCards },
           ...(subscriptionActive === false ? [{ label: "Subscription", href: "/subscription?source=settings", icon: CreditCard }] : []),
-          { label: "Contact Support", href: "mailto:support@shiftnote.app", icon: Mail },
+          { label: "Contact Support", href: "mailto:support@shiftnote.care", icon: Mail },
           { label: "Privacy Policy", href: "/privacy", icon: Shield },
           { label: "Terms of Service", href: "/terms", icon: FileText },
         ].map((item) => <Link className="flex min-h-14 items-center gap-3 py-3 text-sm font-medium hover:text-[var(--primary)]" href={item.href} key={item.label}><item.icon className="size-4 text-[var(--primary)]" /><span className="flex-1">{item.label}</span><ChevronRight className="size-4 text-[var(--muted-foreground)]" /></Link>)}</div><SettingsAccountActions /></CardContent></Card>

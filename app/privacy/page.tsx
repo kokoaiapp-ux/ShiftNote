@@ -8,5 +8,5 @@ export default function PrivacyPage(){return <PolicyPage title="Privacy Policy" 
 ["Retention and security",<p>We retain information for as long as needed to provide the service, meet contractual and legal obligations, resolve disputes, and protect the service. We use administrative, technical, and organizational safeguards, but no online system can guarantee absolute security.</p>],
 ["Your choices and rights",<p>You may update account information and request access, correction, deletion, or export by contacting support. Rights vary by location and may be subject to verification and legal exceptions. You can control cookies and permissions through your browser, though disabling required features may limit the service.</p>],
 ["Children, international use, and changes",<p>ShiftNote is not directed to children under 18. Information may be processed in countries where our providers operate. We may update this policy and will post the effective date; material changes may receive additional notice.</p>],
-["Contact",<p>Questions or privacy requests can be sent to <a className="underline" href="mailto:support@shiftnote.app">support@shiftnote.app</a>.</p>],
+["Contact",<p>Questions or privacy requests can be sent to <a className="underline" href="mailto:support@shiftnote.care">support@shiftnote.care</a>.</p>],
 ]}/>} 
