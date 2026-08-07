@@ -8,8 +8,31 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { SettingsAccountActions } from "@/components/settings/SettingsAccountActions";
 
+import { useAuth } from '@/components/auth/AuthProvider';
+import { useEffect, useState } from 'react';
+import { requireSupabase } from '@/lib/supabase';
+
 export default function SettingsPage() {
+  const auth = useAuth();
   const product = useProduct();
+  const [subscriptionActive, setSubscriptionActive] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (auth.loading) return;
+    if (!auth.user) { queueMicrotask(() => setSubscriptionActive(false)); return; }
+    let active = true;
+    void requireSupabase().auth.getSession().then(({ data }) => fetch('/api/billing/status', { headers: data.session?.access_token ? { Authorization: `Bearer ${data.session.access_token}` } : {} }))
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Subscription status is unavailable.');
+        return await response.json() as { subscription?: { status?: string; current_period_end?: string | null } | null };
+      })
+      .then((payload) => {
+        const subscription = payload.subscription;
+        const unexpired = !subscription?.current_period_end || new Date(subscription.current_period_end).getTime() > Date.now();
+        if (active) setSubscriptionActive(Boolean(subscription?.status && ['active', 'trialing', 'past_due', 'unpaid', 'paused'].includes(subscription.status) && unexpired));
+      })
+      .catch(() => { if (active) setSubscriptionActive(false); });
+    return () => { active = false; };
+  }, [auth.loading, auth.user]);
   const themes = [{ id: "light" as const, label: "Light", icon: Sun }, { id: "dark" as const, label: "Dark", icon: Moon }, { id: "system" as const, label: "System", icon: Monitor }];
   return (
     <>
@@ -22,7 +45,7 @@ export default function SettingsPage() {
         <Card><CardContent><h2 className="font-semibold">Account and support</h2><div className="mt-4 divide-y divide-[var(--border)]">{[
           { label: "Account", href: "/account", icon: UserRound },
           { label: "Billing", href: "/billing", icon: WalletCards },
-          { label: "Subscription", href: "/subscription?source=settings", icon: CreditCard },
+          ...(subscriptionActive === false ? [{ label: "Subscription", href: "/subscription?source=settings", icon: CreditCard }] : []),
           { label: "Contact Support", href: "mailto:support@shiftnote.app", icon: Mail },
           { label: "Privacy Policy", href: "/privacy", icon: Shield },
           { label: "Terms of Service", href: "/terms", icon: FileText },

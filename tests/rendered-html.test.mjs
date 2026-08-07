@@ -183,7 +183,8 @@ test("production authentication and billing redirects use the canonical ShiftNot
     readFile(new URL("../lib/server/billing.ts", import.meta.url), "utf8"),
   ]);
   assert.match(origin, /PRODUCTION_APP_URL = "https:\/\/shiftnote\.care"/);
-  assert.match(origin, /hostname === "localhost" \|\| hostname === "127\.0\.0\.1"/);
+  assert.match(origin, /"shiftnote\.care", "www\.shiftnote\.care"/);
+  assert.match(origin, /return window\.location\.origin/);
   assert.match(auth, /new URL\("\/auth\/callback", browserAppUrl\(\)\)/);
   assert.match(auth, /emailRedirectTo: `\$\{browserAppUrl\(\)\}\/auth\/callback/);
   assert.match(auth, /redirectTo: `\$\{browserAppUrl\(\)\}\/auth\/callback/);
