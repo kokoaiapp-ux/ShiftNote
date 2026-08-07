@@ -3,13 +3,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { copyStylesToPipWindow } from "@/lib/document-pip";
 
+const MOBILE_VIEWPORT = "(max-width: 767px)";
+function isMobileDevice() {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia(MOBILE_VIEWPORT).matches || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+}
+
 export function useDocumentPip() {
   const pipWindowRef = useRef<Window | null>(null);
   const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [isSupported] = useState(
-    () => typeof window !== "undefined" && Boolean(window.documentPictureInPicture),
-  );
+  const [isMobile, setIsMobile] = useState(isMobileDevice);
+  const isSupported = !isMobile && typeof window !== "undefined" && Boolean(window.documentPictureInPicture);
 
   const close = useCallback(() => {
     const pipWindow = pipWindowRef.current;
@@ -20,6 +25,7 @@ export function useDocumentPip() {
   }, []);
 
   const open = useCallback(async () => {
+    if (isMobileDevice()) return;
     const api = window.documentPictureInPicture;
     if (!api) {
       setIsOpen(true);
@@ -84,14 +90,25 @@ export function useDocumentPip() {
     setIsOpen(true);
   }, []);
 
+  useEffect(() => {
+    const media = window.matchMedia(MOBILE_VIEWPORT);
+    const update = () => {
+      const mobile = isMobileDevice();
+      setIsMobile(mobile);
+      if (mobile) close();
+    };
+    media.addEventListener("change", update);
+    update();
+    return () => media.removeEventListener("change", update);
+  }, [close]);
+
   const toggle = useCallback(() => {
+    if (isMobileDevice()) return;
     if (isOpen) close();
     else void open();
   }, [close, isOpen, open]);
 
-  useEffect(() => {
-    return close;
-  }, [close]);
+  useEffect(() => close, [close]);
 
-  return { close, isOpen, isSupported, open, portalRoot, toggle };
+  return { close, isMobile, isOpen, isSupported, open, portalRoot, toggle };
 }

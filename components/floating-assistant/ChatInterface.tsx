@@ -72,7 +72,7 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
 
   useEffect(() => {
     if (!input) return;
-    console.info("Input state updated:", input);
+    console.info("Input state updated:", { characters: input.length });
   }, [input]);
 
   useEffect(() => {
@@ -107,7 +107,7 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
     const transfer = new DataTransfer();
     attachments.forEach((file) => transfer.items.add(file));
     onSend(value, transfer.files.length ? transfer.files : undefined);
-    console.info("Message successfully sent:", value);
+    console.info("Message successfully sent:", { characters: value.length, attachments: attachments.length });
     setInput("");
     setAttachments([]);
     setRecordingPhase("idle");

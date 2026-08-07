@@ -62,7 +62,7 @@ export function useAudioTranscription({ onTranscript, onEnd }: Options) {
     if (!navigator.mediaDevices?.enumerateDevices) return;
     const devices = (await navigator.mediaDevices.enumerateDevices()).filter((device) => device.kind === "audioinput");
     setInputDevices(devices);
-    console.info("Available microphone inputs:", devices.map((device) => ({ deviceId: device.deviceId, label: device.label || "Unnamed microphone" })));
+
   }, []);
 
   useEffect(() => {
@@ -135,7 +135,7 @@ export function useAudioTranscription({ onTranscript, onEnd }: Options) {
 
       const transcript = payload?.text?.trim() ?? "";
       if (!transcript) throw new Error("OpenAI did not detect any speech in the recording. Try again and speak clearly after recording starts.");
-      console.info("Transcript received:", transcript);
+      console.info("Transcript received:", { characters: transcript.length });
       if (notifyTranscript) {
         onTranscriptRef.current(transcript);
         onEndRef.current?.(transcript);
@@ -181,7 +181,7 @@ export function useAudioTranscription({ onTranscript, onEnd }: Options) {
       const permission = await navigator.permissions?.query({ name: "microphone" as PermissionName }).catch(() => null);
       const track = stream.getAudioTracks()[0];
       console.info("Microphone permission status:", permission?.state ?? "granted by active stream");
-      console.info("Selected input device:", { label: track?.label || "Browser default microphone", settings: track?.getSettings() });
+
       track?.addEventListener("mute", () => console.warn("Microphone track muted"));
       track?.addEventListener("unmute", () => console.info("Microphone track unmuted"));
       track?.addEventListener("ended", () => console.warn("Microphone track ended"));
@@ -226,7 +226,7 @@ export function useAudioTranscription({ onTranscript, onEnd }: Options) {
       setIsListening(true);
       console.info("MediaRecorder started:", {
         mimeType: recorder.mimeType || "browser default",
-        microphone: stream.getAudioTracks()[0]?.getSettings(),
+        microphoneActive: stream.getAudioTracks()[0]?.readyState === "live",
       });
       return true;
     } catch (caught) {

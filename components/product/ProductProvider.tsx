@@ -17,7 +17,7 @@ type ProductContextValue = { mode: Mode; template: ClinicalTemplate; setMode: (i
 const ProductContext = createContext<ProductContextValue | null>(null);
 
 function uiMessageText(message?: UIMessage) { return message?.parts.filter((part): part is Extract<(typeof message.parts)[number], { type: "text" }> => part.type === "text").map((part) => part.text).join("") || ""; }
-function reportPersistenceError(error: unknown) { console.error("Supabase persistence failed", error); }
+function reportPersistenceError() { console.error("Supabase persistence failed."); }
 
 export function ProductProvider({ children }: { children: React.ReactNode }) {
   const auth = useAuth();
@@ -53,14 +53,14 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
       if (!active) return;
       const preferences = snapshot.preferences;
       setModeId(preferences?.last_selected_mode || auth.profile?.default_mode || "nurse"); setTemplateId(preferences?.last_selected_template || CUSTOM_TEMPLATE_ID); setThemeState(preferences?.theme || "system"); setCompactState(preferences?.compact_mode || false); setPrimaryColorState(preferences?.primary_color || "#176b4c"); setFavorites(snapshot.favorites); setHistory(snapshot.history); setCustomTemplates(snapshot.customTemplates); setHistoryReadOnly(snapshot.historyReadOnly); setWorkspaceLoaded(true);
-    }).catch((error) => { reportPersistenceError(error); if (active) setWorkspaceLoaded(true); });
+    }).catch(() => { reportPersistenceError(); if (active) setWorkspaceLoaded(true); });
     return () => { active = false; };
   }, [auth.configured, auth.loading, auth.profile?.default_mode, auth.user]);
 
   useEffect(() => {
     if (!auth.user || !process.env.NEXT_PUBLIC_REVENUECAT_WEB_API_KEY) return;
     let active = true;
-    void revenueCatForUser(auth.user.id).then((purchases) => purchases?.getCustomerInfo()).then((info) => { if (active && info) setHistoryReadOnly(!hasProEntitlement(info)); }).catch((error) => console.error("RevenueCat entitlement refresh failed", error));
+    void revenueCatForUser(auth.user.id).then((purchases) => purchases?.getCustomerInfo()).then((info) => { if (active && info) setHistoryReadOnly(!hasProEntitlement(info)); }).catch(() => console.error("RevenueCat entitlement refresh failed."));
     return () => { active = false; };
   }, [auth.user]);
   useEffect(() => {

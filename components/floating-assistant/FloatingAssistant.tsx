@@ -10,6 +10,8 @@ export function FloatingAssistant() {
   const pip = useDocumentPip();
   const chat = useProduct();
 
+  if (pip.isMobile) return null;
+
   const chatInterface = (
     <ChatInterface
       error={chat.error}
@@ -31,7 +33,7 @@ export function FloatingAssistant() {
       {!pip.isOpen && (
         <button
           aria-label="Open ShiftNote assistant"
-          className="fixed bottom-5 right-5 z-50 flex items-center gap-3 rounded-2xl bg-[var(--primary)] px-4 py-3.5 text-sm font-semibold text-white shadow-xl transition hover:-translate-y-0.5 hover:brightness-95"
+          className="fixed bottom-5 right-5 z-50 hidden items-center gap-3 rounded-2xl bg-[var(--primary)] px-4 py-3.5 text-sm font-semibold text-white shadow-xl transition lg:flex hover:-translate-y-0.5 hover:brightness-95"
           onClick={pip.toggle}
           type="button"
         >

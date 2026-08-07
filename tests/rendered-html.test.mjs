@@ -103,12 +103,34 @@ test("send validity reacts to controlled text and attachments", async () => {
   assert.match(chat, /disabled=\{!canSend\}/);
   assert.match(chat, /if \(!canSend\) return/);
   assert.match(chat, /setInput\(\[speechBaseRef\.current, text\]\.filter\(Boolean\)\.join\(" "\)\)/);
-  assert.match(chat, /console\.info\("Input state updated:", input\)/);
+  assert.match(chat, /console\.info\("Input state updated:", \{ characters: input\.length \}\)/);
   assert.match(chat, /console\.info\("Send button enabled:", true\)/);
-  assert.match(chat, /console\.info\("Message successfully sent:", value\)/);
+  assert.match(chat, /console\.info\("Message successfully sent:", \{ characters: value\.length, attachments: attachments\.length \}\)/);
   assert.match(chat, /onChange=\{\(event\) => \{ setInput\(event\.target\.value\)/);
 });
 
+test("secret credentials remain server-only and sensitive content is not logged", async () => {
+  const [chat, recorder, auth, provider, guard] = await Promise.all([
+    readFile(new URL("../components/floating-assistant/ChatInterface.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../hooks/useAudioTranscription.ts", import.meta.url), "utf8"),
+    readFile(new URL("../components/auth/AuthProvider.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/product/ProductProvider.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../scripts/verify-secret-boundaries.mjs", import.meta.url), "utf8"),
+  ]);
+
+  assert.doesNotMatch(chat, /console\.info\("Input state updated:", input\)/);
+  assert.doesNotMatch(chat, /console\.info\("Message successfully sent:", value\)/);
+  assert.doesNotMatch(recorder, /console\.info\("Transcript received:", transcript\)/);
+  assert.doesNotMatch(recorder, /deviceId: device\.deviceId|track\?\.getSettings\(\)/);
+  assert.doesNotMatch(provider, /console\.error\([^\n]*, error\)/);
+  assert.match(auth, /return "Authentication could not be completed\. Please try again\."/);
+  for (const secret of ["OPENAI_API_KEY", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "SUPABASE_SERVICE_ROLE_KEY", "REVENUECAT_SECRET_API_KEY", "REVENUECAT_WEBHOOK_AUTH"]) {
+    assert.match(guard, new RegExp(`"${secret}"`));
+  }
+  assert.match(guard, /NEXT_PUBLIC_\(\?:OPENAI\|STRIPE_SECRET/);
+  assert.match(guard, /configuredSecretValues/);
+  assert.match(guard, /--git-history/);
+});
 test("MediaRecorder audio is uploaded to OpenAI and inserts the returned transcript", async () => {
   const [recorder, route, chat] = await Promise.all([
     readFile(new URL("../hooks/useAudioTranscription.ts", import.meta.url), "utf8"),
@@ -154,6 +176,21 @@ test("MediaRecorder audio is uploaded to OpenAI and inserts the returned transcr
   assert.doesNotMatch(chat, /setRecordingPhase\("transcribing"\);\s*void stopSpeechListening\("maximum-duration"/);
 });
 
+test("production authentication and billing redirects use the canonical ShiftNote origin", async () => {
+  const [origin, auth, billing] = await Promise.all([
+    readFile(new URL("../lib/app-url.ts", import.meta.url), "utf8"),
+    readFile(new URL("../components/auth/AuthProvider.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../lib/server/billing.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(origin, /PRODUCTION_APP_URL = "https:\/\/shiftnote\.care"/);
+  assert.match(origin, /hostname === "localhost" \|\| hostname === "127\.0\.0\.1"/);
+  assert.match(auth, /new URL\("\/auth\/callback", browserAppUrl\(\)\)/);
+  assert.match(auth, /emailRedirectTo: `\$\{browserAppUrl\(\)\}\/auth\/callback/);
+  assert.match(auth, /redirectTo: `\$\{browserAppUrl\(\)\}\/auth\/callback/);
+  assert.doesNotMatch(auth, /location\.origin/);
+  assert.match(billing, /process\.env\.NODE_ENV === "production" \? PRODUCTION_APP_URL/);
+  assert.doesNotMatch(billing, /NEXT_PUBLIC_APP_URL/);
+});
 test("PIP opens at the wider default size", async () => {
   const pip = await readFile(new URL("../hooks/useDocumentPip.ts", import.meta.url), "utf8");
   assert.match(pip, /width: 680/);
@@ -163,6 +200,12 @@ test("PIP opens at the wider default size", async () => {
   assert.match(pip, /style\.colorScheme = isDark \? "dark" : "light"/);
   assert.match(pip, /themeColorMeta\.content = background/);
   assert.match(pip, /new MutationObserver\(syncPipTheme\)/);
+  assert.match(pip, /isMobileDevice\(\)/);
+  assert.match(pip, /if \(isMobileDevice\(\)\) return/);
+  assert.match(pip, /MOBILE_VIEWPORT = "\(max-width: 767px\)"/);
+  const floating = await readFile(new URL("../components/floating-assistant/FloatingAssistant.tsx", import.meta.url), "utf8");
+  assert.match(floating, /if \(pip\.isMobile\) return null/);
+  assert.match(floating, /hidden items-center[^"]*lg:flex/);
 });
 
 test("history, favorites, auto-save, manual save, and AI update paths remain wired", async () => {

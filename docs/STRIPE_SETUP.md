@@ -1,6 +1,6 @@
 # Stripe production setup
 
-ShiftNote uses Supabase Auth for identity and Stripe directly for subscriptions. RevenueCat is intentionally not part of this integration.
+ShiftNote uses Supabase Auth for identity, Stripe Checkout and Customer Portal for billing, and RevenueCat for entitlement synchronization.
 
 ## Environment variables
 
@@ -45,4 +45,4 @@ Copy that endpoint's signing secret to `STRIPE_WEBHOOK_SECRET`. Do not use a Str
 
 ## Redirect URL
 
-Set `NEXT_PUBLIC_APP_URL` to the deployed HTTPS origin, without a trailing slash. Restart/redeploy after changing environment variables.
+Production billing redirects are fixed to `https://shiftnote.care`; no public application URL variable is used.

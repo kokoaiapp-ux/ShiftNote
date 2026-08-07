@@ -2,6 +2,7 @@ import "server-only";
 import Stripe from "stripe";
 import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
+import { PRODUCTION_APP_URL } from "@/lib/app-url";
 
 export type BillingPlan = "monthly" | "six_month" | "promotional_six_month_discount" | "promotional_six_month_retention";
 const planCatalog: Record<BillingPlan, { productEnv: string; priceEnv: string }> = {
@@ -15,7 +16,7 @@ const activeStatuses = new Set(["active", "trialing", "past_due", "unpaid", "pau
 export function getStripe() { const key = process.env.STRIPE_SECRET_KEY; if (!key) throw new Error("STRIPE_NOT_CONFIGURED"); return new Stripe(key); }
 export function getSupabaseAdmin() { const url = process.env.NEXT_PUBLIC_SUPABASE_URL; const key = process.env.SUPABASE_SERVICE_ROLE_KEY; if (!url || !key) throw new Error("SUPABASE_NOT_CONFIGURED"); return createClient<Database>(url, key, { auth: { persistSession: false, autoRefreshToken: false } }); }
 export async function requireApiUser(request: Request) { const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, ""); if (!token) throw new Error("AUTH_REQUIRED"); const admin = getSupabaseAdmin(); const { data, error } = await admin.auth.getUser(token); if (error || !data.user) throw new Error("AUTH_REQUIRED"); return { admin, user: data.user }; }
-export function appUrl(request: Request) { return process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin; }
+export function appUrl(request: Request) { return process.env.NODE_ENV === "production" ? PRODUCTION_APP_URL : new URL(request.url).origin; }
 export function isBillingPlan(value: unknown): value is BillingPlan { return typeof value === "string" && value in planCatalog; }
 export async function priceForPlan(plan: BillingPlan) { const entry = planCatalog[plan]; const product = process.env[entry.productEnv]; const priceId = process.env[entry.priceEnv]; if (!product || !priceId) throw new Error("PRICE_NOT_CONFIGURED"); const price = await getStripe().prices.retrieve(priceId); const actualProduct = typeof price.product === "string" ? price.product : price.product.id; if (!price.active || !price.recurring || actualProduct !== product) throw new Error("PRICE_CONFIGURATION_INVALID"); return price.id; }
 export function planForPrice(priceId: string | null | undefined): BillingPlan | null { if (!priceId) return null; return (Object.keys(planCatalog) as BillingPlan[]).find((plan) => process.env[planCatalog[plan].priceEnv] === priceId) || null; }
