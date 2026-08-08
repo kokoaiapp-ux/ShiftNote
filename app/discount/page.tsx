@@ -7,6 +7,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { Brand } from "@/components/public/PublicChrome";
 import { StatusMessage } from "@/components/ui/status-message";
 import { hasCompletedOnboarding, hasPurchasedPrimaryPaywall, isFirstTimeFlowPending, trackPaywallEvent } from "@/lib/first-time-flow";
+import { loadSubscriptionAccess } from "@/lib/subscription-access-client";
 
 export default function DiscountPage() {
   const auth = useAuth();
@@ -15,10 +16,23 @@ export default function DiscountPage() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   useEffect(() => {
-    if (hasPurchasedPrimaryPaywall() || (!isFirstTimeFlowPending() && !hasCompletedOnboarding())) { router.replace("/dashboard"); return; }
-    trackPaywallEvent("discount_view");
-    queueMicrotask(() => setReady(true));
-  }, [router]);
+    if (auth.loading) return;
+    if (!auth.configured) {
+      if (hasPurchasedPrimaryPaywall() || (!isFirstTimeFlowPending() && !hasCompletedOnboarding())) { router.replace("/dashboard"); return; }
+      trackPaywallEvent("discount_view");
+      queueMicrotask(() => setReady(true));
+      return;
+    }
+    if (!auth.user) { router.replace("/login?returnTo=/discount"); return; }
+    let current = true;
+    void loadSubscriptionAccess(true).then(({ state }) => {
+      if (!current) return;
+      if (state !== "neverSubscribed") { router.replace("/dashboard"); return; }
+      trackPaywallEvent("discount_view");
+      setReady(true);
+    }).catch(() => { if (current) router.replace("/dashboard"); });
+    return () => { current = false; };
+  }, [auth.configured, auth.loading, auth.user, router]);
   function dismiss() { trackPaywallEvent("discount_dismissed"); router.push("/dashboard"); }
   async function purchase() {
     setMessage("");

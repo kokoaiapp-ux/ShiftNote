@@ -5,10 +5,26 @@ import { ChatInterface } from "./ChatInterface";
 import { useDocumentPip } from "@/hooks/useDocumentPip";
 import { useProduct } from "@/components/product/ProductProvider";
 import { PipShell } from "./PipShell";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { loadSubscriptionAccess, proPaywallHref } from "@/lib/subscription-access-client";
 
 export function FloatingAssistant() {
+  const router = useRouter();
+  const auth = useAuth();
   const pip = useDocumentPip();
   const chat = useProduct();
+
+  async function openAssistant() {
+    if (!auth.configured) { await pip.toggle(); return; }
+    try {
+      const { state } = await loadSubscriptionAccess();
+      if (state === "activeSubscription") await pip.toggle();
+      else router.push(proPaywallHref());
+    } catch {
+      router.push(`${proPaywallHref()}&access=expired`);
+    }
+  }
 
   if (pip.isMobile) return null;
 
@@ -34,7 +50,7 @@ export function FloatingAssistant() {
         <button
           aria-label="Open ShiftNote assistant"
           className="fixed bottom-5 right-5 z-50 hidden items-center gap-3 rounded-2xl bg-[var(--primary)] px-4 py-3.5 text-sm font-semibold text-white shadow-xl transition lg:flex hover:-translate-y-0.5 hover:brightness-95"
-          onClick={pip.toggle}
+          onClick={() => void openAssistant()}
           type="button"
         >
           <span className="grid size-8 place-items-center rounded-lg bg-white/15 text-lg">✦</span>

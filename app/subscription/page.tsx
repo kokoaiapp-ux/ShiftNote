@@ -7,6 +7,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { Brand } from "@/components/public/PublicChrome";
 import { StatusMessage } from "@/components/ui/status-message";
 import { beginFirstTimeFlow, hasCompletedOnboarding, hasPurchasedPrimaryPaywall, markPrimaryPaywallPurchased, trackPaywallEvent } from "@/lib/first-time-flow";
+import { loadSubscriptionAccess } from "@/lib/subscription-access-client";
 
 const benefits = ["Save up to 1 hour of documentation every shift with AI.", "Access every professional mode", "Unlimited clinical documentation templates", "Edit, regenerate, save, favorite, and organize your documentation"] as const;
 const plans = [
@@ -33,10 +34,25 @@ export default function SubscriptionPage() {
       trackPaywallEvent("paywall_view", { stage: "entry" });
       return;
     }
-    if (subscriptionSource === "onboarding") {
-      queueMicrotask(() => setFlow({ active: true, stage: "post-onboarding" }));
-      trackPaywallEvent("paywall_view", { stage: "post-onboarding", source: "onboarding" });
-      return;
+    if (subscriptionSource === "onboarding" || subscriptionSource === "pro-gate") {
+      if (auth.loading) return;
+      if (!auth.configured) {
+        beginFirstTimeFlow();
+        queueMicrotask(() => setFlow({ active: true, stage: "post-onboarding" }));
+        trackPaywallEvent("paywall_view", { stage: "post-onboarding", source: subscriptionSource });
+        return;
+      }
+      if (!auth.user) { router.replace(`/login?returnTo=${encodeURIComponent(`/subscription?source=${subscriptionSource}`)}`); return; }
+      let current = true;
+      void loadSubscriptionAccess(true).then(({ state }) => {
+        if (!current) return;
+        if (state === "activeSubscription") { router.replace("/dashboard"); return; }
+        const discountEligible = state === "neverSubscribed";
+        if (discountEligible) beginFirstTimeFlow();
+        setFlow({ active: discountEligible, stage: "post-onboarding" });
+        trackPaywallEvent("paywall_view", { stage: discountEligible ? "post-onboarding" : "standard", source: subscriptionSource });
+      }).catch(() => { if (current) setFlow({ active: false, stage: "post-onboarding" }); });
+      return () => { current = false; };
     }
     if (subscriptionSource === "settings") {
       queueMicrotask(() => setFlow({ active: false, stage: "post-onboarding" }));
@@ -50,7 +66,7 @@ export default function SubscriptionPage() {
     }
     queueMicrotask(() => setFlow({ active: false, stage: "post-onboarding" }));
     trackPaywallEvent("paywall_view", { stage: "standard" });
-  }, [requestedFirstTime, requestedStage, router, subscriptionSource]);
+  }, [auth.configured, auth.loading, auth.user, requestedFirstTime, requestedStage, router, subscriptionSource]);
 
   async function buy(planId: string) {
     setMessage("");

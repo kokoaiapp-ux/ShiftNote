@@ -396,6 +396,35 @@ test("subscription flow gates the primary paywall, preserves the discount until 
   assert.match(env, /STRIPE_PROMOTIONAL_SIX_MONTH_RETENTION_PRICE_ID=/);
 });
 
+test("Pro routes use permanent server-backed subscription access and paid-history discount eligibility", async () => {
+  const [shell, floating, subscription, discount, access, accessRoute, stripeWebhook, migration] = await Promise.all([
+    readFile(new URL("../components/product/AppShell.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/floating-assistant/FloatingAssistant.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/subscription/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/discount/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../lib/server/subscription-access.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/subscription/access/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/webhooks/stripe/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../supabase/migrations/202608080001_subscription_access_lifecycle.sql", import.meta.url), "utf8"),
+  ]);
+  for (const route of ["/copilot", "/modes", "/templates", "/favorites"]) assert.match(shell, new RegExp(route));
+  assert.match(shell, /state === "activeSubscription"/);
+  assert.match(shell, /router\.replace\(proPaywallHref\(\)\)/);
+  assert.match(floating, /loadSubscriptionAccess/);
+  assert.match(subscription, /state === "neverSubscribed"/);
+  assert.match(subscription, /active: discountEligible/);
+  assert.match(discount, /state !== "neverSubscribed"/);
+  for (const state of ["neverSubscribed", "activeSubscription", "expiredSubscription"]) assert.match(access, new RegExp(state));
+  assert.match(access, /subscription_cache/);
+  assert.match(access, /stripe_subscriptions|currentSubscription/);
+  assert.match(accessRoute, /resolveSubscriptionAccess/);
+  assert.match(stripeWebhook, /invoice\.paid/);
+  assert.match(stripeWebhook, /markSubscriptionPaidByCustomer/);
+  assert.match(migration, /has_subscribed_before boolean not null default false/);
+  assert.match(migration, /subscription_lifecycle_select_own/);
+  assert.match(migration, /revoke insert, update, delete/);
+});
+
 function contrastRatio(first, second) {
   const high = Math.max(relativeLuminance(first), relativeLuminance(second));
   const low = Math.min(relativeLuminance(first), relativeLuminance(second));

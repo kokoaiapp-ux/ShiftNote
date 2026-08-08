@@ -4,7 +4,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { pgcrypto } from "@electric-sql/pglite/contrib/pgcrypto";
 
 const db = new PGlite({ extensions: { pgcrypto } });
-const migration = ["202608040001_initial_shift_note.sql", "202608050001_optimize_rls_indexes.sql", "202608050002_profile_onboarding_fields.sql"].map((name) => readFile(new URL(`../supabase/migrations/${name}`, import.meta.url), "utf8"));
+const migration = ["202608040001_initial_shift_note.sql", "202608050001_optimize_rls_indexes.sql", "202608050002_profile_onboarding_fields.sql", "202608080001_subscription_access_lifecycle.sql"].map((name) => readFile(new URL(`../supabase/migrations/${name}`, import.meta.url), "utf8"));
 const migrationSql = (await Promise.all(migration)).join("\n");
 const userOne = "11111111-1111-4111-8111-111111111111";
 const userTwo = "22222222-2222-4222-8222-222222222222";
@@ -57,8 +57,16 @@ denied = false;
 try { await db.query("update public.subscription_cache set subscription_status='expired' where user_id=$1", [userOne]); } catch { denied = true; }
 assert.equal(denied, true, "client cannot mutate the server-owned subscription cache");
 await db.exec("reset role; reset request.jwt.claim.sub;");
+await db.query("insert into public.subscription_lifecycle (user_id,has_subscribed_before,first_paid_at) values ($1,true,now())", [userOne]);
+await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub', '${userOne}', false);`);
+result = await db.query("select has_subscribed_before from public.subscription_lifecycle");
+assert.deepEqual(result.rows, [{ has_subscribed_before: true }], "subscription lifecycle is readable only by its owner");
+denied = false;
+try { await db.query("update public.subscription_lifecycle set has_subscribed_before=false where user_id=$1", [userOne]); } catch { denied = true; }
+assert.equal(denied, true, "client cannot change permanent paid eligibility");
+await db.exec("reset role; reset request.jwt.claim.sub;");
 await db.query("delete from auth.users where id=$1", [userOne]);
-for (const table of ["profiles", "onboarding_answers", "conversations", "messages", "favorites", "custom_templates", "user_preferences", "subscription_cache"]) {
+for (const table of ["profiles", "onboarding_answers", "conversations", "messages", "favorites", "custom_templates", "user_preferences", "subscription_cache", "subscription_lifecycle"]) {
   result = await db.query(`select count(*)::int as count from public.${table} where ${table === "profiles" ? "auth_user_id" : "user_id"}=$1`, [userOne]);
   assert.equal(result.rows[0].count, 0, `${table} cascades on account deletion`);
 }

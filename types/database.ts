@@ -419,6 +419,33 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_lifecycle: {
+        Row: {
+          created_at: string
+          first_paid_at: string | null
+          has_subscribed_before: boolean
+          paid_history_checked_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          first_paid_at?: string | null
+          has_subscribed_before?: boolean
+          paid_history_checked_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          first_paid_at?: string | null
+          has_subscribed_before?: boolean
+          paid_history_checked_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       subscription_cache: {
         Row: {
           billing_provider: string | null

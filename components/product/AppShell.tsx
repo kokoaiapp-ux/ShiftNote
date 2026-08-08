@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { useProduct } from "./ProductProvider";
 import { FloatingAssistant } from "@/components/floating-assistant/FloatingAssistant";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { loadSubscriptionAccess, proPaywallHref } from "@/lib/subscription-access-client";
 
 const navigation = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -18,6 +19,8 @@ const navigation = [
   { href: "/history", label: "History", icon: Clock3 },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
+const proRoutes = ["/copilot", "/modes", "/templates", "/favorites"];
+function isProRoute(pathname: string) { return proRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`)); }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -25,11 +28,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const auth = useAuth();
   const { mode, template } = useProduct();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [allowedProPath, setAllowedProPath] = useState("");
   const publicRoutes = ["/", "/login", "/signup", "/onboarding", "/subscription", "/discount", "/privacy", "/terms", "/update-password"];
   const isPublic = publicRoutes.includes(pathname);
   useEffect(() => { if (!isPublic && auth.configured && !auth.loading && !auth.user) router.replace(`/login?returnTo=${encodeURIComponent(pathname)}`); }, [auth.configured, auth.loading, auth.user, isPublic, pathname, router]);
+  useEffect(() => {
+    if (!isProRoute(pathname) || !auth.configured || auth.loading || !auth.user) return;
+    let current = true;
+    void loadSubscriptionAccess().then(({ state }) => {
+      if (!current) return;
+      if (state === "activeSubscription") setAllowedProPath(pathname);
+      else router.replace(proPaywallHref());
+    }).catch(() => { if (current) router.replace(`${proPaywallHref()}&access=expired`); });
+    return () => { current = false; };
+  }, [auth.configured, auth.loading, auth.user, pathname, router]);
   if (isPublic) return <>{children}</>;
   if (auth.configured && (auth.loading || !auth.user)) return <div className="min-h-screen bg-[var(--background)]" />;
+  if (auth.configured && auth.user && isProRoute(pathname) && allowedProPath !== pathname) return <div className="min-h-screen bg-[var(--background)]" />;
 
   const sidebar = (
     <aside className="flex h-full w-64 flex-col border-r border-[var(--border)] bg-[var(--sidebar)] px-4 py-5">
