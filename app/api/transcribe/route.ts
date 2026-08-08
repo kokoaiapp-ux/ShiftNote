@@ -1,3 +1,5 @@
+import { requireRevenueCatPro } from "@/lib/server/revenuecat";
+
 export const runtime = "edge";
 export const maxDuration = 60;
 
@@ -15,6 +17,7 @@ const SUPPORTED_TYPES = new Set([
 ]);
 
 export async function POST(request: Request) {
+  try { await requireRevenueCatPro(request); } catch (error) { const code = error instanceof Error ? error.message : ""; return Response.json({ error: code === "PRO_REQUIRED" ? "ShiftNote Pro is required." : "Sign in to use voice input." }, { status: code === "PRO_REQUIRED" ? 403 : 401 }); }
   if (!process.env.OPENAI_API_KEY) {
     return Response.json(
       { error: "OpenAI transcription is not configured. Add OPENAI_API_KEY and restart ShiftNote." },

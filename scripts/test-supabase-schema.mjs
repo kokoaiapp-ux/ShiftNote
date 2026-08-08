@@ -4,7 +4,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { pgcrypto } from "@electric-sql/pglite/contrib/pgcrypto";
 
 const db = new PGlite({ extensions: { pgcrypto } });
-const migration = ["202608040001_initial_shift_note.sql", "202608050001_optimize_rls_indexes.sql", "202608050002_profile_onboarding_fields.sql", "202608080001_subscription_access_lifecycle.sql"].map((name) => readFile(new URL(`../supabase/migrations/${name}`, import.meta.url), "utf8"));
+const migration = ["202608040001_initial_shift_note.sql", "202608050001_optimize_rls_indexes.sql", "202608050002_profile_onboarding_fields.sql", "202608080001_subscription_access_lifecycle.sql", "202608080002_founder_role.sql"].map((name) => readFile(new URL(`../supabase/migrations/${name}`, import.meta.url), "utf8"));
 const migrationSql = (await Promise.all(migration)).join("\n");
 const userOne = "11111111-1111-4111-8111-111111111111";
 const userTwo = "22222222-2222-4222-8222-222222222222";
@@ -15,7 +15,7 @@ await db.exec(`
   create role anon nologin;
   create role authenticated nologin;
   create schema auth;
-  create table auth.users (id uuid primary key, email text, raw_user_meta_data jsonb not null default '{}'::jsonb);
+  create table auth.users (id uuid primary key, email text, last_sign_in_at timestamptz, raw_user_meta_data jsonb not null default '{}'::jsonb);
   create function auth.uid() returns uuid language sql stable as $$
     select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
   $$;
@@ -24,17 +24,23 @@ await db.exec(`
 `);
 await db.exec(migrationSql);
 
-await db.query("insert into auth.users (id,email,raw_user_meta_data) values ($1,$2,$3::jsonb),($4,$5,$6::jsonb)", [userOne, "one@example.test", JSON.stringify({ display_name: "User One" }), userTwo, "two@example.test", JSON.stringify({ display_name: "User Two" })]);
+await db.query("insert into auth.users (id,email,raw_user_meta_data) values ($1,$2,$3::jsonb),($4,$5,$6::jsonb)", [userOne, "one@example.test", JSON.stringify({ display_name: "User One" }), userTwo, "kokoaiapp@gmail.com", JSON.stringify({ display_name: "Founder" })]);
 let result = await db.query("select count(*)::int as count from public.profiles");
 assert.equal(result.rows[0].count, 2, "new-user trigger creates profiles");
 result = await db.query("select count(*)::int as count from public.user_preferences");
 assert.equal(result.rows[0].count, 2, "new-user trigger creates preferences");
+result = await db.query("select role from public.profiles where auth_user_id=$1", [userTwo]);
+assert.deepEqual(result.rows[0], { role: "founder" }, "founder email is assigned the founder role by the database");
+let denied = false;
 
 await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub', '${userOne}', false);`);
 await db.query("select public.complete_onboarding($1::jsonb)", [JSON.stringify({ profession: "Nurse", workplace: "Hospital", experience: "5-10 years", emr: "Epic", documentation: "Progress notes", preferred_default_mode: "nurse" })]);
 result = await db.query("select profession,emr,place_of_work,default_mode from public.profiles");
 assert.equal(result.rows.length, 1, "RLS exposes only the signed-in user's profile");
 assert.deepEqual(result.rows[0], { profession: "Nurse", emr: "Epic", place_of_work: "Hospital", default_mode: "nurse" });
+denied = false;
+try { await db.query("update public.profiles set role='founder' where auth_user_id=$1", [userOne]); } catch { denied = true; }
+assert.equal(denied, true, "authenticated users cannot promote their own profile role");
 result = await db.query("select onboarding_completed,emr_platform from public.onboarding_answers");
 assert.deepEqual(result.rows[0], { onboarding_completed: true, emr_platform: "Epic" });
 await db.query("insert into public.conversations (id,user_id,title,selected_mode,selected_template) values ($1,$2,$3,$4,$5)", [conversation, userOne, "Skin Assessment", "nurse", "nurse-skin-assessment"]);
@@ -45,7 +51,7 @@ await db.query("insert into public.custom_templates (user_id,mode,template_name,
 await db.query("update public.user_preferences set last_selected_mode='nurse', theme='dark' where user_id=$1", [userOne]);
 result = await db.query("select count(*)::int as count from public.messages");
 assert.equal(result.rows[0].count, 1, "message CRUD succeeds for owner");
-let denied = false;
+denied = false;
 try { await db.query("insert into public.conversations (user_id,title,selected_mode,selected_template) values ($1,'Denied','nurse','custom-template')", [userTwo]); } catch { denied = true; }
 assert.equal(denied, true, "RLS denies writes for another user");
 await db.exec("reset role; reset request.jwt.claim.sub;");

@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
+import { hasFounderRole } from "@/lib/server/roles";
 
 type SubscriberResponse={subscriber?:{entitlements?:Record<string,{expires_date?:string|null;product_identifier?:string}>;subscriptions?:Record<string,{expires_date?:string|null;period_type?:string;unsubscribe_detected_at?:string|null;billing_issues_detected_at?:string|null;store?:string}>}};
 const api="https://api.revenuecat.com/v1";
@@ -11,6 +12,7 @@ export async function syncRevenueCatSubscriber(admin:SupabaseClient<Database>,us
 export async function requireRevenueCatPro(request:Request){
   const { requireApiUser } = await import("@/lib/server/billing");
   const { admin, user } = await requireApiUser(request);
+  if (await hasFounderRole(admin,user.id)) return { admin, user };
   if (!revenueCatConfigured()) return { admin, user };
   const { data, error } = await admin.from("subscription_cache").select("subscription_status,expiration_date,entitlement").eq("user_id",user.id).maybeSingle();
   if(error)throw error;

@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import { currentSubscription, getStripe } from "@/lib/server/billing";
+import { hasFounderRole } from "@/lib/server/roles";
 
 export type SubscriptionAccessState = "neverSubscribed" | "activeSubscription" | "expiredSubscription";
 
@@ -31,6 +32,7 @@ export async function markSubscriptionPaidByCustomer(admin: SupabaseClient<Datab
 }
 
 export async function resolveSubscriptionAccess(admin: SupabaseClient<Database>, userId: string) {
+  if (await hasFounderRole(admin, userId)) return { state: "activeSubscription" as const, hasSubscribedBefore: false, isFounder: true };
   const [stripeSubscription, lifecycleResult, cacheResult, customerResult] = await Promise.all([
     currentSubscription(admin, userId),
     admin.from("subscription_lifecycle").select("has_subscribed_before,first_paid_at,paid_history_checked_at").eq("user_id", userId).maybeSingle(),
@@ -67,5 +69,5 @@ export async function resolveSubscriptionAccess(admin: SupabaseClient<Database>,
     : hasSubscribedBefore
       ? "expiredSubscription"
       : "neverSubscribed";
-  return { state, hasSubscribedBefore };
+  return { state, hasSubscribedBefore, isFounder: false };
 }

@@ -10,7 +10,7 @@ import { SettingsAccountActions } from "@/components/settings/SettingsAccountAct
 
 import { useAuth } from '@/components/auth/AuthProvider';
 import { useEffect, useState } from 'react';
-import { requireSupabase } from '@/lib/supabase';
+import { loadSubscriptionAccess } from '@/lib/subscription-access-client';
 
 export default function SettingsPage() {
   const auth = useAuth();
@@ -20,16 +20,7 @@ export default function SettingsPage() {
     if (auth.loading) return;
     if (!auth.user) { queueMicrotask(() => setSubscriptionActive(false)); return; }
     let active = true;
-    void requireSupabase().auth.getSession().then(({ data }) => fetch('/api/billing/status', { headers: data.session?.access_token ? { Authorization: `Bearer ${data.session.access_token}` } : {} }))
-      .then(async (response) => {
-        if (!response.ok) throw new Error('Subscription status is unavailable.');
-        return await response.json() as { subscription?: { status?: string; current_period_end?: string | null } | null };
-      })
-      .then((payload) => {
-        const subscription = payload.subscription;
-        const unexpired = !subscription?.current_period_end || new Date(subscription.current_period_end).getTime() > Date.now();
-        if (active) setSubscriptionActive(Boolean(subscription?.status && ['active', 'trialing', 'past_due', 'unpaid', 'paused'].includes(subscription.status) && unexpired));
-      })
+    void loadSubscriptionAccess(true).then(({ state }) => { if (active) setSubscriptionActive(state === 'activeSubscription'); })
       .catch(() => { if (active) setSubscriptionActive(false); });
     return () => { active = false; };
   }, [auth.loading, auth.user]);

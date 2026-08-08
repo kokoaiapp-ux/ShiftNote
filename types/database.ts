@@ -247,6 +247,7 @@ export type Database = {
           id: string
           place_of_work: string | null
           profession: string | null
+          role: string
           updated_at: string
           workplace: string | null
         }
@@ -260,6 +261,7 @@ export type Database = {
           id?: string
           place_of_work?: string | null
           profession?: string | null
+          role?: string
           updated_at?: string
           workplace?: string | null
         }
@@ -273,6 +275,7 @@ export type Database = {
           id?: string
           place_of_work?: string | null
           profession?: string | null
+          role?: string
           updated_at?: string
           workplace?: string | null
         }

@@ -427,6 +427,31 @@ test("Pro routes use permanent server-backed subscription access and paid-histor
   assert.match(migration, /revoke insert, update, delete/);
 });
 
+test("founder access is database-assigned and enforced by shared server authorization", async () => {
+  const [migration, roles, revenueCat, access, accessClient, subscription, settings, transcribe] = await Promise.all([
+    readFile(new URL("../supabase/migrations/202608080002_founder_role.sql", import.meta.url), "utf8"),
+    readFile(new URL("../lib/server/roles.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/server/revenuecat.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/server/subscription-access.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/subscription-access-client.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/subscription/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/settings/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/transcribe/route.ts", import.meta.url), "utf8"),
+  ]);
+  assert.match(migration, /role text not null default 'user'/);
+  assert.match(migration, /kokoaiapp@gmail\.com/);
+  assert.match(migration, /update of email, last_sign_in_at on auth\.users/);
+  assert.match(migration, /revoke update on public\.profiles from authenticated/);
+  assert.match(migration, /grant update \(full_name, profession, workplace, default_mode, emr, place_of_work\)/);
+  assert.match(roles, /data\?\.role === "founder"/);
+  assert.match(revenueCat, /if \(await hasFounderRole\(admin,user\.id\)\) return/);
+  assert.match(access, /isFounder: true/);
+  assert.doesNotMatch(accessClient, /kokoaiapp@gmail\.com/);
+  assert.match(subscription, /if \(isFounder\) router\.replace\("\/dashboard"\)/);
+  assert.match(settings, /state === 'activeSubscription'/);
+  assert.match(transcribe, /requireRevenueCatPro\(request\)/);
+});
+
 function contrastRatio(first, second) {
   const high = Math.max(relativeLuminance(first), relativeLuminance(second));
   const low = Math.min(relativeLuminance(first), relativeLuminance(second));
