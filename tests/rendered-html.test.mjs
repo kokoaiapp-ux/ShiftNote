@@ -386,6 +386,8 @@ test("subscription flow gates the primary paywall, preserves the discount until 
   assert.doesNotMatch(signup, /isFirstTimeFlowPending|router\.replace\("\/subscription/);
   assert.match(chrome, /subscription\?flow=first-time&stage=entry/);
   assert.match(chrome, /a\[href="\/signup"\]/);
+  assert.match(chrome, /href=\{auth\.user \? "\/dashboard" : "\/"\}/);
+  assert.match(chrome, /auth\.accessToken\(\).*token \? "\/dashboard" : "\/"/);
   assert.match(shell, /"\/discount"/);
   assert.match(shell, /"\/onboarding"/);
   for (const label of ["Subscription", "Contact Support", "Privacy Policy", "Terms of Service"]) assert.match(settings, new RegExp(label));

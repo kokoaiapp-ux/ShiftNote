@@ -3,11 +3,20 @@
 import Link from "next/link";
 import { Menu, Sparkles, X } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { useRouter } from "next/navigation";
 
 const firstTimeHref = "/subscription?flow=first-time&stage=entry";
 
 export function Brand() {
-  return <Link href="/" className="flex items-center gap-2.5"><span className="grid size-9 place-items-center rounded-xl bg-[var(--primary)] text-white"><Sparkles className="size-4" /></span><span className="font-semibold tracking-tight">ShiftNote</span></Link>;
+  const auth = useAuth();
+  const router = useRouter();
+  function resolveLoadingSession(event: React.MouseEvent<HTMLAnchorElement>) {
+    if (!auth.configured || !auth.loading) return;
+    event.preventDefault();
+    void auth.accessToken().then((token) => router.push(token ? "/dashboard" : "/")).catch(() => router.push("/"));
+  }
+  return <Link href={auth.user ? "/dashboard" : "/"} className="flex items-center gap-2.5" onClick={resolveLoadingSession}><span className="grid size-9 place-items-center rounded-xl bg-[var(--primary)] text-white"><Sparkles className="size-4" /></span><span className="font-semibold tracking-tight">ShiftNote</span></Link>;
 }
 
 export function PublicHeader() {
