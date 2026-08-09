@@ -579,7 +579,7 @@ test("Meta Pixel and Conversions API are production-only, privacy-minimized, and
   ]);
   assert.match(client, /NODE_ENV === "production"/); assert.doesNotMatch(client, /META_CONVERSIONS_API_TOKEN/);
   assert.match(pixel, /connect\.facebook\.net/); assert.match(pixel, /trackMeta\("PageView"/); assert.match(pixel, /trackMeta\("ViewContent"/); assert.match(layout, /<MetaPixel \/>/);
-  assert.match(server, /process\.env\.META_CONVERSIONS_API_TOKEN/); assert.match(server, /graph\.facebook\.com/); assert.match(server, /event_id/); assert.match(server, /user_data: \{\}/);
+  assert.match(server, /process\.env\.META_CONVERSIONS_API_TOKEN/); assert.match(server, /graph\.facebook\.com/); assert.match(server, /event_id/); assert.match(server, /user_data: \{ external_id: \[anonymousEventMatchKey\] \}/); assert.match(server, /createHash\("sha256"\)\.update\(input\.eventId\)/);
   assert.doesNotMatch(server, /email|patient|clinical|documentation|x-forwarded-for|user_agent|_fbp|_fbc/);
   assert.match(route, /productionOrigins/); assert.doesNotMatch(route, /"Purchase"/);
   for (const event of ["CompleteRegistration", "Login", "CompleteOnboarding"]) assert.match(auth, new RegExp(event));
