@@ -5,6 +5,8 @@ const envFile = ".env.local";
 if (existsSync(envFile)) loadEnvFile(envFile);
 
 const required = [
+  "NEXT_PUBLIC_GA_MEASUREMENT_ID",
+  "NEXT_PUBLIC_TIKTOK_PIXEL_ID", "TIKTOK_EVENTS_API_TOKEN",
   "OPENAI_API_KEY", "OPENAI_MODEL",
   "NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "SUPABASE_SERVICE_ROLE_KEY",
   "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "STRIPE_CUSTOMER_PORTAL_CONFIGURATION_ID",
@@ -24,6 +26,7 @@ for (const name of required) {
 }
 
 check("NEXT_PUBLIC_SUPABASE_URL", /^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i);
+check("NEXT_PUBLIC_GA_MEASUREMENT_ID", /^G-[A-Z0-9]+$/i);
 check("STRIPE_SECRET_KEY", /^(?:sk|rk)_live_[A-Za-z0-9_]+$/);
 check("STRIPE_WEBHOOK_SECRET", /^whsec_[A-Za-z0-9_]+$/);
 check("STRIPE_CUSTOMER_PORTAL_CONFIGURATION_ID", /^bpc_[A-Za-z0-9_]+$/);

@@ -4,6 +4,8 @@ import "./globals.css";
 import { ProductProvider } from "@/components/product/ProductProvider";
 import { AppShell } from "@/components/product/AppShell";
 import { AuthProvider } from "@/components/auth/AuthProvider";
+import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
+import { TikTokPixel } from "@/components/analytics/TikTokPixel";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -17,6 +19,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <GoogleAnalytics />
+        <TikTokPixel />
         <AuthProvider><ProductProvider><AppShell>{children}</AppShell></ProductProvider></AuthProvider>
       </body>
     </html>

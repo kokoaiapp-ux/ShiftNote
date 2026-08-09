@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Check, Sparkles, X } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -8,6 +8,8 @@ import { Brand } from "@/components/public/PublicChrome";
 import { StatusMessage } from "@/components/ui/status-message";
 import { beginFirstTimeFlow, hasCompletedOnboarding, hasPurchasedPrimaryPaywall, markPrimaryPaywallPurchased, trackPaywallEvent } from "@/lib/first-time-flow";
 import { loadSubscriptionAccess } from "@/lib/subscription-access-client";
+import { trackEvent } from "@/lib/analytics";
+import { trackTikTok } from "@/lib/tiktok";
 
 const benefits = ["Save up to 1 hour of documentation every shift with AI.", "Access every professional mode", "Unlimited clinical documentation templates", "Edit, regenerate, save, favorite, and organize your documentation"] as const;
 const plans = [
@@ -26,6 +28,14 @@ export default function SubscriptionPage() {
   const [founderAccessChecked, setFounderAccessChecked] = useState(false);
   const [busy, setBusy] = useState("");
   const [message, setMessage] = useState("");
+  const paywallTracked = useRef(false);
+
+  useEffect(() => {
+    if (!flow || paywallTracked.current || (auth.configured && auth.user && !founderAccessChecked)) return;
+    paywallTracked.current = true;
+    trackEvent("view_subscription_paywall", { source: subscriptionSource || "direct", stage: flow.stage });
+    trackTikTok("ViewContent", { content_id: "subscription_paywall", content_type: "product" });
+  }, [auth.configured, auth.user, flow, founderAccessChecked, subscriptionSource]);
 
   useEffect(() => {
     if (auth.loading) return;
@@ -83,6 +93,8 @@ export default function SubscriptionPage() {
 
   async function buy(planId: string) {
     setMessage("");
+    trackEvent("begin_checkout", { currency: "USD", value: planId === "monthly" ? 19.99 : 83.94, items: [{ item_id: planId, item_name: planId === "monthly" ? "ShiftNote Pro Monthly" : "ShiftNote Pro Six Months" }] });
+    trackTikTok("InitiateCheckout", { currency: "USD", value: planId === "monthly" ? 19.99 : 83.94, content_id: planId, content_type: "product" });
     trackPaywallEvent("purchase_started", { plan: planId, source: flow?.active ? "first-time" : "standard" });
     if (!auth.configured) { if (flow?.active) markPrimaryPaywallPurchased(); trackPaywallEvent("purchase_completed", { plan: planId, mode: "preview" }); router.push("/dashboard"); return; }
     if (!auth.user) { router.push(flow?.active ? "/signup?returnTo=/onboarding" : "/login?returnTo=/subscription"); return; }
