@@ -585,7 +585,7 @@ test("Meta Pixel and Conversions API are production-only, privacy-minimized, and
   for (const event of ["CompleteRegistration", "Login", "CompleteOnboarding"]) assert.match(auth, new RegExp(event));
   assert.match(subscription, /ViewPaywall/); assert.match(subscription, /InitiateCheckout/); assert.match(discount, /ViewPaywall/); assert.match(discount, /InitiateCheckout/);
   assert.match(billing, /trackMetaPixelOnly\("Purchase"/); assert.match(billing, /payment\.eventId/);
-  for (const event of ["Purchase", "SubscriptionRenewed", "SubscriptionCancelled"]) assert.match(webhook, new RegExp(event));
+  for (const event of ["Purchase", "SubscriptionCreated", "SubscriptionRenewed", "SubscriptionCancelled"]) assert.match(webhook, new RegExp(event));
   assert.match(webhook, /const eventId = `stripe-invoice-\$\{invoice\.id\}`/);
   assert.match(env, /NEXT_PUBLIC_META_PIXEL_ID/); assert.match(env, /META_CONVERSIONS_API_TOKEN/);
 });

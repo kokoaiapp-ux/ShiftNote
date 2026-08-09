@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { PRODUCTION_APP_URL } from "@/lib/app-url";
 import { sendMetaServerEvent } from "@/lib/server/meta";
 
-const allowed = new Set(["PageView", "ViewContent", "CompleteRegistration", "Login", "CompleteOnboarding", "ViewPaywall", "InitiateCheckout", "Purchase", "SubscriptionCreated", "SubscriptionRenewed", "SubscriptionCancelled"]);
+const allowed = new Set(["PageView", "ViewContent", "CompleteRegistration", "Login", "CompleteOnboarding", "ViewPaywall", "InitiateCheckout"]);
 const productionOrigins = new Set([PRODUCTION_APP_URL, "https://www.shiftnote.care"]);
 export async function POST(request: Request) {
   try {
