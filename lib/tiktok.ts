@@ -1,6 +1,6 @@
 "use client";
 
-export type TikTokEvent = "PageView" | "CompleteRegistration" | "Login" | "CompleteOnboarding" | "ViewContent" | "InitiateCheckout" | "Purchase" | "SubscriptionRenewal" | "SubscriptionCancellation";
+export type TikTokEvent = "PageView" | "CompleteRegistration" | "Login" | "CompleteOnboarding" | "ViewContent" | "InitiateCheckout" | "CompletePayment" | "Purchase" | "SubscriptionRenewal" | "SubscriptionCancellation";
 type TikTokProperties = Record<string, unknown>;
 
 declare global {

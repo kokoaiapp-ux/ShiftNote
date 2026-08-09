@@ -9,7 +9,8 @@ declare global {
   }
 }
 
-export const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID?.trim() || "";
+const configuredGaValue = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID?.trim() || "";
+export const gaMeasurementId = configuredGaValue.match(/G-[A-Z0-9]+/i)?.[0] || "";
 export const analyticsEnabled = process.env.NODE_ENV === "production" && Boolean(gaMeasurementId);
 
 export function trackEvent(name: string, parameters: AnalyticsParameters = {}) {
