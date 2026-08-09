@@ -560,5 +560,32 @@ test("TikTok Pixel and Events API use production gating, server secrets, and Str
   assert.match(verify, /payment_status !== "paid"/); assert.match(verify, /stripe-invoice-/);
   assert.match(billing, /trackTikTokPixelOnly\("CompletePayment"/); assert.match(billing, /payment\.eventId/);
   assert.match(cancel, /stripe-cancel-/); assert.match(webhook, /SubscriptionRenewal/); assert.match(webhook, /CompletePayment/); assert.match(webhook, /SubscriptionCancellation/);
-  assert.match(webhook, /eventId: `stripe-invoice-\$\{invoice\.id\}`/); assert.match(env, /NEXT_PUBLIC_TIKTOK_PIXEL_ID/); assert.match(env, /TIKTOK_EVENTS_API_TOKEN/);
+  assert.match(webhook, /const eventId = `stripe-invoice-\$\{invoice\.id\}`/); assert.match(env, /NEXT_PUBLIC_TIKTOK_PIXEL_ID/); assert.match(env, /TIKTOK_EVENTS_API_TOKEN/);
+});
+
+test("Meta Pixel and Conversions API are production-only, privacy-minimized, and Stripe-deduplicated", async () => {
+  const [client, pixel, server, route, layout, auth, subscription, discount, billing, webhook, env] = await Promise.all([
+    readFile(new URL("../lib/meta.ts", import.meta.url), "utf8"),
+    readFile(new URL("../components/analytics/MetaPixel.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../lib/server/meta.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/events/meta/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/auth/AuthProvider.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/subscription/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/discount/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/billing/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/webhooks/stripe/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../.env.local.example", import.meta.url), "utf8"),
+  ]);
+  assert.match(client, /NODE_ENV === "production"/); assert.doesNotMatch(client, /META_CONVERSIONS_API_TOKEN/);
+  assert.match(pixel, /connect\.facebook\.net/); assert.match(pixel, /trackMeta\("PageView"/); assert.match(pixel, /trackMeta\("ViewContent"/); assert.match(layout, /<MetaPixel \/>/);
+  assert.match(server, /process\.env\.META_CONVERSIONS_API_TOKEN/); assert.match(server, /graph\.facebook\.com/); assert.match(server, /event_id/); assert.match(server, /user_data: \{\}/);
+  assert.doesNotMatch(server, /email|patient|clinical|documentation|x-forwarded-for|user_agent|_fbp|_fbc/);
+  assert.match(route, /productionOrigins/); assert.doesNotMatch(route, /"Purchase"/);
+  for (const event of ["CompleteRegistration", "Login", "CompleteOnboarding"]) assert.match(auth, new RegExp(event));
+  assert.match(subscription, /ViewPaywall/); assert.match(subscription, /InitiateCheckout/); assert.match(discount, /ViewPaywall/); assert.match(discount, /InitiateCheckout/);
+  assert.match(billing, /trackMetaPixelOnly\("Purchase"/); assert.match(billing, /payment\.eventId/);
+  for (const event of ["Purchase", "SubscriptionRenewed", "SubscriptionCancelled"]) assert.match(webhook, new RegExp(event));
+  assert.match(webhook, /const eventId = `stripe-invoice-\$\{invoice\.id\}`/);
+  assert.match(env, /NEXT_PUBLIC_META_PIXEL_ID/); assert.match(env, /META_CONVERSIONS_API_TOKEN/);
 });

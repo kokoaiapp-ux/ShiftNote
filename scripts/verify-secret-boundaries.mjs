@@ -19,6 +19,7 @@ const secretEnvironmentNames = [
   "SUPABASE_DB_PASSWORD",
   "TIKTOK_EVENTS_API_TOKEN",
   "TIKTOK_TEST_EVENT_CODE",
+  "META_CONVERSIONS_API_TOKEN",
 ];
 const secretValueEnvironmentNames = secretEnvironmentNames.filter(
   (name) => name !== "REVENUECAT_STRIPE_APP_PUBLIC_API_KEY",
@@ -43,7 +44,7 @@ for (const sourceRoot of sourceRoots) {
     const isClientModule = /^\s*["']use client["'];/m.test(content);
     const usedSecrets = secretEnvironmentNames.filter((name) => content.includes(name));
 
-    if (/NEXT_PUBLIC_(?:OPENAI|STRIPE_SECRET|SUPABASE_SERVICE_ROLE|REVENUECAT_SECRET|TIKTOK_EVENTS_API_TOKEN|[^\s]*WEBHOOK)/.test(content)) {
+    if (/NEXT_PUBLIC_(?:OPENAI|STRIPE_SECRET|SUPABASE_SERVICE_ROLE|REVENUECAT_SECRET|TIKTOK_EVENTS_API_TOKEN|META_CONVERSIONS_API_TOKEN|[^\s]*WEBHOOK)/.test(content)) {
       errors.push(`${projectPath}: a secret uses the public client prefix.`);
     }
     if ((isClientModule || !isServerBoundary) && (usedSecrets.length || serverRequestMarkers.some((marker) => content.includes(marker)))) {

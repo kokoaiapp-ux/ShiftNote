@@ -10,6 +10,7 @@ import { hasCompletedOnboarding, hasPurchasedPrimaryPaywall, isFirstTimeFlowPend
 import { loadSubscriptionAccess } from "@/lib/subscription-access-client";
 import { trackEvent } from "@/lib/analytics";
 import { trackTikTok } from "@/lib/tiktok";
+import { trackMeta } from "@/lib/meta";
 
 export default function DiscountPage() {
   const auth = useAuth();
@@ -21,7 +22,7 @@ export default function DiscountPage() {
     if (auth.loading) return;
     if (!auth.configured) {
       if (hasPurchasedPrimaryPaywall() || (!isFirstTimeFlowPending() && !hasCompletedOnboarding())) { router.replace("/dashboard"); return; }
-      trackPaywallEvent("discount_view"); trackEvent("view_subscription_paywall", { source: "discount" }); trackTikTok("ViewContent", { content_id: "discount_paywall", content_type: "product" });
+      trackPaywallEvent("discount_view"); trackEvent("view_subscription_paywall", { source: "discount" }); trackTikTok("ViewContent", { content_id: "discount_paywall", content_type: "product" }); trackMeta("ViewPaywall", { content_ids: ["discount_paywall"], content_type: "product" });
       queueMicrotask(() => setReady(true));
       return;
     }
@@ -30,7 +31,7 @@ export default function DiscountPage() {
     void loadSubscriptionAccess(true).then(({ state }) => {
       if (!current) return;
       if (state !== "neverSubscribed") { router.replace("/dashboard"); return; }
-      trackPaywallEvent("discount_view"); trackEvent("view_subscription_paywall", { source: "discount" }); trackTikTok("ViewContent", { content_id: "discount_paywall", content_type: "product" });
+      trackPaywallEvent("discount_view"); trackEvent("view_subscription_paywall", { source: "discount" }); trackTikTok("ViewContent", { content_id: "discount_paywall", content_type: "product" }); trackMeta("ViewPaywall", { content_ids: ["discount_paywall"], content_type: "product" });
       setReady(true);
     }).catch(() => { if (current) router.replace("/dashboard"); });
     return () => { current = false; };
@@ -40,6 +41,7 @@ export default function DiscountPage() {
     setMessage("");
     trackEvent("begin_checkout", { currency: "USD", value: 71.94, items: [{ item_id: "promotional_six_month_discount", item_name: "ShiftNote Pro Promotional Six Months" }] });
     trackTikTok("InitiateCheckout", { currency: "USD", value: 71.94, content_id: "promotional_six_month_discount", content_type: "product" });
+    trackMeta("InitiateCheckout", { currency: "USD", value: 71.94, content_ids: ["promotional_six_month_discount"], content_type: "product" });
     trackPaywallEvent("purchase_started", { plan: "promotional-six-month", source: "discount" });
     if (!auth.configured) { trackPaywallEvent("purchase_completed", { plan: "promotional-six-month", mode: "preview" }); router.push("/dashboard"); return; }
     if (!auth.user) { router.push("/login?returnTo=/discount"); return; }

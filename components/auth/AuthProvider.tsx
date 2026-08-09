@@ -9,6 +9,7 @@ import { getSupabase, requireSupabase, supabaseConfigured } from "@/lib/supabase
 import type { Json, Tables } from "@/types/database";
 import { consumePendingAuthEvent, trackEvent } from "@/lib/analytics";
 import { consumePendingTikTokAuthEvent, setPendingTikTokAuthEvent, trackTikTok } from "@/lib/tiktok";
+import { consumePendingMetaAuthEvent, setPendingMetaAuthEvent, trackMeta } from "@/lib/meta";
 
 type OnboardingData = { profession: string; workplace: string; experience: string; emr: string; documentation: string; specialty?: string };
 export type AuthUser = User & { uid: string; displayName: string | null };
@@ -46,15 +47,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     }
     void supabaseClient.auth.getSession().then(({ data }) => load(data.session?.user ?? null));
-    const { data } = supabaseClient.auth.onAuthStateChange((event, session) => { if (event === "SIGNED_IN") { consumePendingAuthEvent(); consumePendingTikTokAuthEvent(); } void load(session?.user ?? null); });
+    const { data } = supabaseClient.auth.onAuthStateChange((event, session) => { if (event === "SIGNED_IN") { consumePendingAuthEvent(); consumePendingTikTokAuthEvent(); consumePendingMetaAuthEvent(); } void load(session?.user ?? null); });
     return () => { active = false; data.subscription.unsubscribe(); };
   }, []);
 
-  async function oauth(provider: "google" | "apple", next = "/dashboard") { setPendingTikTokAuthEvent(safeNext(next).startsWith("/onboarding") ? "CompleteRegistration" : "Login"); const callback = new URL("/auth/callback", browserAppUrl()); callback.searchParams.set("next", safeNext(next)); const { error } = await requireSupabase().auth.signInWithOAuth({ provider, options: { redirectTo: callback.toString() } }); if (error) throw error; }
+  async function oauth(provider: "google" | "apple", next = "/dashboard") { const registration = safeNext(next).startsWith("/onboarding"); setPendingTikTokAuthEvent(registration ? "CompleteRegistration" : "Login"); setPendingMetaAuthEvent(registration ? "CompleteRegistration" : "Login"); const callback = new URL("/auth/callback", browserAppUrl()); callback.searchParams.set("next", safeNext(next)); const { error } = await requireSupabase().auth.signInWithOAuth({ provider, options: { redirectTo: callback.toString() } }); if (error) throw error; }
   const value: AuthContextValue = {
     user, loading, configured: supabaseConfigured, ...account,
-    async signInEmail(email, password) { const { error } = await requireSupabase().auth.signInWithPassword({ email, password }); if (error) throw error; trackTikTok("Login", { method: "email" }); },
-    async signUpEmail(name, email, password) { const { data, error } = await requireSupabase().auth.signUp({ email, password, options: { data: { display_name: name }, emailRedirectTo: `${browserAppUrl()}/auth/callback?next=${encodeURIComponent("/onboarding")}` } }); if (error) throw error; trackTikTok("CompleteRegistration", { method: "email" }); return { emailConfirmationRequired: !data.session }; },
+    async signInEmail(email, password) { const { error } = await requireSupabase().auth.signInWithPassword({ email, password }); if (error) throw error; trackTikTok("Login", { method: "email" }); trackMeta("Login", { method: "email" }); },
+    async signUpEmail(name, email, password) { const { data, error } = await requireSupabase().auth.signUp({ email, password, options: { data: { display_name: name }, emailRedirectTo: `${browserAppUrl()}/auth/callback?next=${encodeURIComponent("/onboarding")}` } }); if (error) throw error; trackTikTok("CompleteRegistration", { method: "email" }); trackMeta("CompleteRegistration", { method: "email" }); return { emailConfirmationRequired: !data.session }; },
     signInGoogle(next) { return oauth("google", next); },
     signInApple(next) { return oauth("apple", next); },
     async resetPassword(email) { const { error } = await requireSupabase().auth.resetPasswordForEmail(email, { redirectTo: `${browserAppUrl()}/auth/callback?next=${encodeURIComponent("/update-password")}` }); if (error) throw error; },
@@ -68,6 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
       trackEvent("onboarding_completed");
       trackTikTok("CompleteOnboarding");
+      trackMeta("CompleteOnboarding");
       localStorage.setItem("shiftnote-onboarding-draft", JSON.stringify(data));
       markOnboardingComplete();
       setAccount((current) => ({

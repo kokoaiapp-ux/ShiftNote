@@ -10,6 +10,7 @@ import { beginFirstTimeFlow, hasCompletedOnboarding, hasPurchasedPrimaryPaywall,
 import { loadSubscriptionAccess } from "@/lib/subscription-access-client";
 import { trackEvent } from "@/lib/analytics";
 import { trackTikTok } from "@/lib/tiktok";
+import { trackMeta } from "@/lib/meta";
 
 const benefits = ["Save up to 1 hour of documentation every shift with AI.", "Access every professional mode", "Unlimited clinical documentation templates", "Edit, regenerate, save, favorite, and organize your documentation"] as const;
 const plans = [
@@ -35,6 +36,7 @@ export default function SubscriptionPage() {
     paywallTracked.current = true;
     trackEvent("view_subscription_paywall", { source: subscriptionSource || "direct", stage: flow.stage });
     trackTikTok("ViewContent", { content_id: "subscription_paywall", content_type: "product" });
+    trackMeta("ViewPaywall", { content_ids: ["subscription_paywall"], content_type: "product" });
   }, [auth.configured, auth.user, flow, founderAccessChecked, subscriptionSource]);
 
   useEffect(() => {
@@ -95,6 +97,7 @@ export default function SubscriptionPage() {
     setMessage("");
     trackEvent("begin_checkout", { currency: "USD", value: planId === "monthly" ? 19.99 : 83.94, items: [{ item_id: planId, item_name: planId === "monthly" ? "ShiftNote Pro Monthly" : "ShiftNote Pro Six Months" }] });
     trackTikTok("InitiateCheckout", { currency: "USD", value: planId === "monthly" ? 19.99 : 83.94, content_id: planId, content_type: "product" });
+    trackMeta("InitiateCheckout", { currency: "USD", value: planId === "monthly" ? 19.99 : 83.94, content_ids: [planId], content_type: "product" });
     trackPaywallEvent("purchase_started", { plan: planId, source: flow?.active ? "first-time" : "standard" });
     if (!auth.configured) { if (flow?.active) markPrimaryPaywallPurchased(); trackPaywallEvent("purchase_completed", { plan: planId, mode: "preview" }); router.push("/dashboard"); return; }
     if (!auth.user) { router.push(flow?.active ? "/signup?returnTo=/onboarding" : "/login?returnTo=/subscription"); return; }
