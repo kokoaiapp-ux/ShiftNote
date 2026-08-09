@@ -1,6 +1,6 @@
 "use client";
 
-export type MetaEvent = "PageView" | "ViewContent" | "CompleteRegistration" | "Login" | "CompleteOnboarding" | "ViewPaywall" | "InitiateCheckout" | "Purchase" | "SubscriptionRenewed" | "SubscriptionCancelled";
+export type MetaEvent = "PageView" | "ViewContent" | "CompleteRegistration" | "Login" | "CompleteOnboarding" | "ViewPaywall" | "InitiateCheckout" | "Purchase" | "SubscriptionCreated" | "SubscriptionRenewed" | "SubscriptionCancelled";
 type MetaProperties = Record<string, unknown>;
 declare global { interface Window { fbq?: (...args: unknown[]) => void; _fbq?: unknown; } }
 
