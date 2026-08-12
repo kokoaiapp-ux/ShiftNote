@@ -165,6 +165,8 @@ test("MediaRecorder audio is uploaded to OpenAI and inserts the returned transcr
   assert.match(recorder, /debugRecordingUrl/);
   assert.match(recorder, /formData\.append\("audio"/);
   assert.match(recorder, /fetch\("\/api\/transcribe"/);
+  assert.match(recorder, /const accessToken = await auth\.accessToken\(\)/);
+  assert.match(recorder, /Authorization: `Bearer \$\{accessToken\}`/);
   assert.match(recorder, /onTranscriptRef\.current\(transcript\)/);
   assert.match(recorder, /completedSegmentsRef\.current\.push\(segment\)/);
   assert.match(recorder, /Microphone access was denied/);
@@ -192,6 +194,29 @@ test("MediaRecorder audio is uploaded to OpenAI and inserts the returned transcr
   assert.match(chat, /\.then\(\(\) => setRecordingPhase\("paused"\)\)/);
   assert.match(chat, /recordingSeconds < MAX_RECORDING_SECONDS && <button[\s\S]*>Continue<\/button>/);
   assert.doesNotMatch(chat, /setRecordingPhase\("transcribing"\);\s*void stopSpeechListening\("maximum-duration"/);
+});
+
+test("summarize, Nurse reports, Custom Documentation wording, and signup routing stay scoped", async () => {
+  const [chat, data, landing, signup, onboarding, history] = await Promise.all([
+    readFile(new URL("../components/floating-assistant/ChatInterface.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../lib/product-data.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/auth/AuthCard.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/onboarding/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/product/HistoryWorkspace.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(chat, /label="Summarize"/);
+  assert.match(chat, /one concise continuous professional note with no paragraph breaks/);
+  assert.match(chat, /Preserve all important clinical information, chronology, professional terminology, and medical accuracy/);
+  assert.match(chat, /Start your Custom Documentation/);
+  assert.match(chat, /Describe the patient's condition or tap the microphone to speak\. ShiftNote will generate your documentation\./);
+  assert.match(chat, /Start your \$\{product\.template\.name\}/);
+  for (const template of ["Admission Report", "Discharge Report"]) assert.match(data, new RegExp(template));
+  for (const scenario of ["New admission", "Hospital admission", "Facility admission", "Initial assessment", "Admission after transfer", "Routine discharge", "Hospital transfer", "Home discharge", "Hospice discharge", "Discharge summary"]) assert.match(data, new RegExp(scenario));
+  assert.equal((landing.match(/href="\/signup"/g) || []).length, 2);
+  assert.match(signup, /mode === "signup" \? \(params\.get\("returnTo"\) \|\| "\/onboarding"\)/);
+  assert.match(onboarding, /router\.push\("\/subscription\?source=onboarding"\)/);
+  assert.match(history, /useAudioTranscription/);
 });
 
 test("production authentication and billing redirects use the canonical ShiftNote origin", async () => {

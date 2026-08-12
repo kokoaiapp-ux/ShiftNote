@@ -2,7 +2,7 @@
 
 import type { UIMessage } from "ai";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
-import { Check, Copy, FilePlus2, LoaderCircle, Mic, Paperclip, Pause, Pencil, Play, Plus, RefreshCw, Save, Send, Square, Star, X } from "lucide-react";
+import { AlignLeft, Check, Copy, FilePlus2, LoaderCircle, Mic, Paperclip, Pause, Pencil, Play, Plus, RefreshCw, Save, Send, Square, Star, X } from "lucide-react";
 import { useAudioTranscription } from "@/hooks/useAudioTranscription";
 import { useProduct, type SavedNote } from "@/components/product/ProductProvider";
 import { Button } from "@/components/ui/button";
@@ -252,9 +252,9 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
         {messages.length === 0 ? (
           <div className="flex h-full flex-col justify-center">
             <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-[var(--primary-soft)] text-2xl text-[var(--primary)]">✦</span>
-            <h3 className="mt-4 text-center text-lg font-semibold tracking-tight">Start your {product.template.name}</h3>
+            <h3 className="mt-4 text-center text-lg font-semibold tracking-tight">{product.template.id === CUSTOM_TEMPLATE_ID ? "Start your Custom Documentation" : `Start your ${product.template.name}`}</h3>
             <p className="mx-auto mt-2 max-w-[290px] text-center text-xs leading-5 text-[var(--muted-foreground)]">
-              Type or dictate the clinical information you want documented.
+              {product.template.id === CUSTOM_TEMPLATE_ID ? "Describe the patient's condition or tap the microphone to speak. ShiftNote will generate your documentation." : "Type or dictate the clinical information you want documented."}
             </p>
           </div>
         ) : (
@@ -287,6 +287,7 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
                   <ActionButton active={actionSuccess === "template"} icon={FilePlus2} label="Template" successLabel="Saved as Template" onClick={() => { setCustomName(product.template.name); setTemplateDialogOpen(true); }} />
                   <ActionButton active={actionSuccess === "edit"} icon={Pencil} label="Edit" successLabel="Changes Saved" onClick={() => { setInput(`Revise this ${product.template.name}: `); showSuccess("edit"); }} />
                   <ActionButton active={actionSuccess === "regenerate"} icon={RefreshCw} label="Regenerate" successLabel="Regenerating" onClick={() => { product.regenerate(); showSuccess("regenerate"); }} />
+                  <ActionButton active={actionSuccess === "summarize"} icon={AlignLeft} label="Summarize" successLabel="Summarizing" onClick={() => { onSend("Rewrite the generated documentation as one concise continuous professional note with no paragraph breaks or unnecessary repetition. Preserve all important clinical information, chronology, professional terminology, and medical accuracy."); showSuccess("summarize"); }} />
                 </div>
               </div>
             )}

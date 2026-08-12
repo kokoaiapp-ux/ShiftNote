@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 type Options = {
   onTranscript: (text: string) => void;
@@ -23,6 +24,7 @@ const SUPPORTED_MIME_TYPES = [
 ];
 
 export function useAudioTranscription({ onTranscript, onEnd }: Options) {
+  const auth = useAuth();
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const currentChunksRef = useRef<Blob[]>([]);
@@ -119,8 +121,10 @@ export function useAudioTranscription({ onTranscript, onEnd }: Options) {
         formData.append("audio", file);
       });
       console.info("OpenAI transcription upload started:", { files: segments.length, totalBytes: segments.reduce((sum, item) => sum + item.size, 0) });
+      const accessToken = await auth.accessToken();
       const response = await fetch("/api/transcribe", {
         method: "POST",
+        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
         body: formData,
         signal: controller.signal,
       });
@@ -154,7 +158,7 @@ export function useAudioTranscription({ onTranscript, onEnd }: Options) {
       if (abortRef.current === controller) abortRef.current = null;
       setIsTranscribing(false);
     }
-  }, []);
+  }, [auth]);
 
   const startListening = useCallback(async (append = false) => {
     if (!isSupported) {

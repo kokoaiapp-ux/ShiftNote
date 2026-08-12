@@ -56,7 +56,7 @@ export const customClinicalTemplate: ClinicalTemplate = {
 };
 
 const catalog: Record<string, Array<[string, string]>> = {
-  nurse: [["Skilled Nursing Note", "Document skilled assessment, interventions, teaching, and response."], ["General Progress Note", "Create a concise chronological nursing progress note."], ["Medication Administration", "Record medication administration, refusal, and response."], ["Pain Assessment", "Document findings, intervention, and reassessment."], ["Change of Condition", "Capture clinical change, notifications, and response."], ["Incident Report", "Build an objective event record."], ["Hospice Note", "Document symptoms, comfort interventions, and support."], ["Skin Assessment", "Describe skin integrity and related care."], ["Shift Summary", "Create a focused end of shift handoff."]],
+  nurse: [["Skilled Nursing Note", "Document skilled assessment, interventions, teaching, and response."], ["General Progress Note", "Create a concise chronological nursing progress note."], ["Medication Administration", "Record medication administration, refusal, and response."], ["Pain Assessment", "Document findings, intervention, and reassessment."], ["Change of Condition", "Capture clinical change, notifications, and response."], ["Incident Report", "Build an objective event record."], ["Hospice Note", "Document symptoms, comfort interventions, and support."], ["Skin Assessment", "Describe skin integrity and related care."], ["Shift Summary", "Create a focused end of shift handoff."], ["Admission Report", "Document admission findings, history, assessment, and immediate care needs."], ["Discharge Report", "Document discharge status, care summary, instructions, and disposition."]],
   physician: [["SOAP Note", "Structure subjective, objective, assessment, and plan."], ["Progress Note", "Document interval progress and current plan."], ["History & Physical", "Create a complete history and physical."], ["Consult Note", "Document the consult question, findings, and recommendations."], ["Procedure Note", "Record procedure details and outcome."], ["Discharge Summary", "Summarize course, condition, and follow up."], ["Patient Education", "Document education, understanding, and next steps."]],
   "nurse-practitioner": [["SOAP Note", "Structure an advanced practice patient encounter."], ["Progress Note", "Document interval evaluation and plan."], ["History & Physical", "Create a focused history and physical."], ["Medication Management", "Document medication evaluation and changes."], ["Procedure Note", "Record an office procedure and response."], ["Discharge Summary", "Summarize care and follow up."], ["Patient Education", "Document counseling and understanding."]],
   pharmacist: [["Medication Review", "Assess the complete medication regimen."], ["Medication Reconciliation", "Reconcile reported and active medications."], ["Drug Therapy Intervention", "Document a medication related intervention."], ["Medication Counseling", "Capture counseling and patient understanding."], ["Drug Interaction", "Document an identified interaction and action."], ["Medication Monitoring", "Record efficacy and safety monitoring."], ["Controlled Substance Review", "Document controlled substance review."]],
@@ -77,7 +77,12 @@ function slug(value: string) {
 }
 
 function examplesFor(id: string, name: string): TemplateExample[] {
-  return ["Initial documentation", "Routine follow-up", "Change in status", "Care coordination", "Outcome review"].map((title, index) => ({
+  const scenarios = name === "Admission Report"
+    ? ["New admission", "Hospital admission", "Facility admission", "Initial assessment", "Admission after transfer"]
+    : name === "Discharge Report"
+      ? ["Routine discharge", "Hospital transfer", "Home discharge", "Hospice discharge", "Discharge summary"]
+      : ["Initial documentation", "Routine follow-up", "Change in status", "Care coordination", "Outcome review"];
+  return scenarios.map((title, index) => ({
     id: `${id}-${index + 1}`,
     title,
     starter: `Create a ${name} for ${title.toLowerCase()}. Ask only for missing facts and never invent clinical details.`,
