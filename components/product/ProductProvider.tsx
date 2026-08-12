@@ -7,9 +7,9 @@ import { CUSTOM_TEMPLATE_ID, getMode, getTemplate, type ClinicalTemplate, type C
 import { useAuth } from "@/components/auth/AuthProvider";
 import { requireSupabase } from "@/lib/supabase";
 import { addFavoriteRecord, createConversation, createMessage, deleteConversation, deleteFavoriteRecord, loadWorkspace, persistNote, savePreferences, saveTemplateRecord, updateStoredNote } from "@/lib/supabase-data";
-import { hasProEntitlement, revenueCatForUser } from "@/lib/revenuecat";
 import { notifyDashboardMetricsChanged } from "@/lib/dashboard-metrics";
 import { trackEvent } from "@/lib/analytics";
+import { useSubscriptionAccess } from "@/components/subscription/SubscriptionAccessProvider";
 
 export type SavedNote = { id: string; conversationId?: string; messageId?: string; title: string; favoriteName: string; preview: string; modeId: string; templateId: string; createdAt: string; lastUpdated: string; attachments?: StoredAttachment[]; versions?: NoteVersion[]; pendingInformation?: string };
 export type StoredAttachment = { id: string; name: string; type: string; size: number; dataUrl: string };
@@ -23,6 +23,7 @@ function reportPersistenceError() { console.error("Supabase persistence failed."
 
 export function ProductProvider({ children }: { children: React.ReactNode }) {
   const auth = useAuth();
+  const subscription = useSubscriptionAccess();
   const [workspaceLoaded, setWorkspaceLoaded] = useState(false);
   const [historyReadOnly, setHistoryReadOnly] = useState(false);
   const [modeId, setModeId] = useState("nurse");
@@ -60,11 +61,9 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
   }, [auth.configured, auth.loading, auth.profile?.default_mode, auth.user]);
 
   useEffect(() => {
-    if (!auth.user || !process.env.NEXT_PUBLIC_REVENUECAT_WEB_API_KEY) return;
-    let active = true;
-    void revenueCatForUser(auth.user.id).then((purchases) => purchases?.getCustomerInfo()).then((info) => { if (active && info) setHistoryReadOnly(!hasProEntitlement(info)); }).catch(() => console.error("RevenueCat entitlement refresh failed."));
-    return () => { active = false; };
-  }, [auth.user]);
+    if (!subscription.access) return;
+    queueMicrotask(() => setHistoryReadOnly(subscription.access?.state !== "activeSubscription"));
+  }, [subscription.access]);
   useEffect(() => {
     localStorage.setItem("shiftnote-mode", modeId); localStorage.setItem("shiftnote-template", templateId); localStorage.setItem("shiftnote-theme", theme); localStorage.setItem("shiftnote-compact", String(compact)); localStorage.setItem("shiftnote-primary-color", primaryColor);
     const root = document.documentElement; const isDark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches); root.classList.toggle("dark", isDark); root.dataset.compact = String(compact); root.style.setProperty("--primary", primaryColor);

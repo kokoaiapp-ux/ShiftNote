@@ -32,7 +32,7 @@ export async function markSubscriptionPaidByCustomer(admin: SupabaseClient<Datab
 }
 
 export async function resolveSubscriptionAccess(admin: SupabaseClient<Database>, userId: string) {
-  if (await hasFounderRole(admin, userId)) return { state: "activeSubscription" as const, hasSubscribedBefore: false, isFounder: true };
+  if (await hasFounderRole(admin, userId)) return { state: "activeSubscription" as const, hasSubscribedBefore: false, isFounder: true, expiresAt: null };
   const [stripeSubscription, lifecycleResult, cacheResult, customerResult] = await Promise.all([
     currentSubscription(admin, userId),
     admin.from("subscription_lifecycle").select("has_subscribed_before,first_paid_at,paid_history_checked_at").eq("user_id", userId).maybeSingle(),
@@ -69,5 +69,9 @@ export async function resolveSubscriptionAccess(admin: SupabaseClient<Database>,
     : hasSubscribedBefore
       ? "expiredSubscription"
       : "neverSubscribed";
-  return { state, hasSubscribedBefore, isFounder: false };
+  const activeExpirations = [
+    stripeActive ? stripeSubscription?.current_period_end : null,
+    revenueCatActive ? cacheResult.data?.expiration_date : null,
+  ].filter((value): value is string => Boolean(value)).sort();
+  return { state, hasSubscribedBefore, isFounder: false, expiresAt: activeExpirations[0] || null };
 }

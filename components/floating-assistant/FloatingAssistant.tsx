@@ -7,18 +7,21 @@ import { useProduct } from "@/components/product/ProductProvider";
 import { PipShell } from "./PipShell";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { loadSubscriptionAccess, proPaywallHref } from "@/lib/subscription-access-client";
+import { proPaywallHref } from "@/lib/subscription-access-client";
+import { useSubscriptionAccess } from "@/components/subscription/SubscriptionAccessProvider";
 
 export function FloatingAssistant() {
   const router = useRouter();
   const auth = useAuth();
   const pip = useDocumentPip();
   const chat = useProduct();
+  const subscription = useSubscriptionAccess();
 
   async function openAssistant() {
     if (!auth.configured) { await pip.toggle(); return; }
     try {
-      const { state } = await loadSubscriptionAccess();
+      const result = subscription.access || await subscription.refresh();
+      const state = result?.state;
       if (state === "activeSubscription") await pip.toggle();
       else router.push(proPaywallHref());
     } catch {

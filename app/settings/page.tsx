@@ -8,22 +8,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { SettingsAccountActions } from "@/components/settings/SettingsAccountActions";
 
-import { useAuth } from '@/components/auth/AuthProvider';
-import { useEffect, useState } from 'react';
-import { loadSubscriptionAccess } from '@/lib/subscription-access-client';
+import { useSubscriptionAccess } from '@/components/subscription/SubscriptionAccessProvider';
 
 export default function SettingsPage() {
-  const auth = useAuth();
   const product = useProduct();
-  const [subscriptionActive, setSubscriptionActive] = useState<boolean | null>(null);
-  useEffect(() => {
-    if (auth.loading) return;
-    if (!auth.user) { queueMicrotask(() => setSubscriptionActive(false)); return; }
-    let active = true;
-    void loadSubscriptionAccess(true).then(({ state }) => { if (active) setSubscriptionActive(state === 'activeSubscription'); })
-      .catch(() => { if (active) setSubscriptionActive(false); });
-    return () => { active = false; };
-  }, [auth.loading, auth.user]);
+  const subscription = useSubscriptionAccess();
+  const subscriptionActive = subscription.loading && !subscription.access ? null : subscription.access?.state === 'activeSubscription';
   const themes = [{ id: "light" as const, label: "Light", icon: Sun }, { id: "dark" as const, label: "Dark", icon: Moon }, { id: "system" as const, label: "System", icon: Monitor }];
   return (
     <>

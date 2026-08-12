@@ -423,10 +423,12 @@ test("subscription flow gates the primary paywall, preserves the discount until 
   assert.match(env, /STRIPE_PROMOTIONAL_SIX_MONTH_RETENTION_PRICE_ID=/);
 });
 
-test("Pro routes use permanent server-backed subscription access and paid-history discount eligibility", async () => {
-  const [shell, floating, subscription, discount, access, accessRoute, stripeWebhook, migration] = await Promise.all([
+test("Pro routes use global server-backed subscription access without per-route authorization flashes", async () => {
+  const [shell, floating, provider, layout, subscription, discount, access, accessRoute, stripeWebhook, migration] = await Promise.all([
     readFile(new URL("../components/product/AppShell.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/floating-assistant/FloatingAssistant.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/subscription/SubscriptionAccessProvider.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/subscription/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/discount/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../lib/server/subscription-access.ts", import.meta.url), "utf8"),
@@ -435,12 +437,20 @@ test("Pro routes use permanent server-backed subscription access and paid-histor
     readFile(new URL("../supabase/migrations/202608080001_subscription_access_lifecycle.sql", import.meta.url), "utf8"),
   ]);
   for (const route of ["/copilot", "/modes", "/templates", "/favorites"]) assert.match(shell, new RegExp(route));
-  assert.match(shell, /state === "activeSubscription"/);
+  assert.match(shell, /subscription\.access\.state !== "activeSubscription"/);
   assert.match(shell, /router\.replace\(proPaywallHref\(\)\)/);
-  assert.match(floating, /loadSubscriptionAccess/);
-  assert.match(subscription, /state === "neverSubscribed"/);
+  assert.doesNotMatch(shell, /allowedProPath/);
+  assert.match(floating, /subscription\.access \|\| await subscription\.refresh\(\)/);
+  assert.match(layout, /<SubscriptionAccessProvider>/);
+  assert.match(provider, /REVALIDATE_INTERVAL_MS = 60_000/);
+  assert.match(provider, /visibilitychange/);
+  assert.match(provider, /postgres_changes/);
+  assert.match(provider, /subscription_cache/);
+  assert.match(provider, /table: "profiles"/);
+  assert.match(provider, /access\?\.expiresAt/);
+  assert.match(subscription, /subscription\.access\.state === "neverSubscribed"/);
   assert.match(subscription, /active: discountEligible/);
-  assert.match(discount, /state !== "neverSubscribed"/);
+  assert.match(discount, /subscription\.access\.state !== "neverSubscribed"/);
   for (const state of ["neverSubscribed", "activeSubscription", "expiredSubscription"]) assert.match(access, new RegExp(state));
   assert.match(access, /subscription_cache/);
   assert.match(access, /stripe_subscriptions|currentSubscription/);
@@ -472,8 +482,8 @@ test("founder access is database-assigned and enforced by shared server authoriz
   assert.match(revenueCat, /if \(await hasFounderRole\(admin,user\.id\)\) return/);
   assert.match(access, /isFounder: true/);
   assert.doesNotMatch(accessClient, /kokoaiapp@gmail\.com/);
-  assert.match(subscription, /if \(isFounder\) router\.replace\("\/dashboard"\)/);
-  assert.match(settings, /state === 'activeSubscription'/);
+  assert.match(subscription, /subscription\.access\?\.isFounder/);
+  assert.match(settings, /subscription\.access\?\.state === 'activeSubscription'/);
   assert.match(transcribe, /requireRevenueCatPro\(request\)/);
 });
 

@@ -7,7 +7,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { Brand } from "@/components/public/PublicChrome";
 import { StatusMessage } from "@/components/ui/status-message";
 import { beginFirstTimeFlow, hasCompletedOnboarding, hasPurchasedPrimaryPaywall, markPrimaryPaywallPurchased, trackPaywallEvent } from "@/lib/first-time-flow";
-import { loadSubscriptionAccess } from "@/lib/subscription-access-client";
+import { useSubscriptionAccess } from "@/components/subscription/SubscriptionAccessProvider";
 import { trackEvent } from "@/lib/analytics";
 import { trackTikTok } from "@/lib/tiktok";
 import { trackMeta } from "@/lib/meta";
@@ -20,6 +20,7 @@ const plans = [
 
 export default function SubscriptionPage() {
   const auth = useAuth();
+  const subscription = useSubscriptionAccess();
   const router = useRouter();
   const params = useSearchParams();
   const requestedFirstTime = params.get("flow") === "first-time";
@@ -42,14 +43,10 @@ export default function SubscriptionPage() {
   useEffect(() => {
     if (auth.loading) return;
     if (!auth.configured || !auth.user) { queueMicrotask(() => setFounderAccessChecked(true)); return; }
-    let current = true;
-    void loadSubscriptionAccess(true).then(({ isFounder }) => {
-      if (!current) return;
-      if (isFounder) router.replace("/dashboard");
-      else setFounderAccessChecked(true);
-    }).catch(() => { if (current) setFounderAccessChecked(true); });
-    return () => { current = false; };
-  }, [auth.configured, auth.loading, auth.user, router]);
+    if (subscription.loading) return;
+    if (subscription.access?.isFounder) router.replace("/dashboard");
+    else queueMicrotask(() => setFounderAccessChecked(true));
+  }, [auth.configured, auth.loading, auth.user, router, subscription.access, subscription.loading]);
 
   useEffect(() => {
     if (requestedFirstTime && requestedStage === "entry") {
@@ -68,16 +65,13 @@ export default function SubscriptionPage() {
         return;
       }
       if (!auth.user) { router.replace(`/login?returnTo=${encodeURIComponent(`/subscription?source=${subscriptionSource}`)}`); return; }
-      let current = true;
-      void loadSubscriptionAccess(true).then(({ state }) => {
-        if (!current) return;
-        if (state === "activeSubscription") { router.replace("/dashboard"); return; }
-        const discountEligible = state === "neverSubscribed";
-        if (discountEligible) beginFirstTimeFlow();
-        setFlow({ active: discountEligible, stage: "post-onboarding" });
-        trackPaywallEvent("paywall_view", { stage: discountEligible ? "post-onboarding" : "standard", source: subscriptionSource });
-      }).catch(() => { if (current) setFlow({ active: false, stage: "post-onboarding" }); });
-      return () => { current = false; };
+      if (subscription.loading || !subscription.access) return;
+      if (subscription.access.state === "activeSubscription") { router.replace("/dashboard"); return; }
+      const discountEligible = subscription.access.state === "neverSubscribed";
+      if (discountEligible) beginFirstTimeFlow();
+      queueMicrotask(() => setFlow({ active: discountEligible, stage: "post-onboarding" }));
+      trackPaywallEvent("paywall_view", { stage: discountEligible ? "post-onboarding" : "standard", source: subscriptionSource });
+      return;
     }
     if (subscriptionSource === "settings") {
       queueMicrotask(() => setFlow({ active: false, stage: "post-onboarding" }));
@@ -91,7 +85,7 @@ export default function SubscriptionPage() {
     }
     queueMicrotask(() => setFlow({ active: false, stage: "post-onboarding" }));
     trackPaywallEvent("paywall_view", { stage: "standard" });
-  }, [auth.configured, auth.loading, auth.user, requestedFirstTime, requestedStage, router, subscriptionSource]);
+  }, [auth.configured, auth.loading, auth.user, requestedFirstTime, requestedStage, router, subscription.access, subscription.loading, subscriptionSource]);
 
   async function buy(planId: string) {
     setMessage("");

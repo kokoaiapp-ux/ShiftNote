@@ -7,6 +7,7 @@ import { AuthProvider } from "@/components/auth/AuthProvider";
 import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 import { TikTokPixel } from "@/components/analytics/TikTokPixel";
 import { MetaPixel } from "@/components/analytics/MetaPixel";
+import { SubscriptionAccessProvider } from "@/components/subscription/SubscriptionAccessProvider";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -23,7 +24,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <GoogleAnalytics />
         <TikTokPixel />
         <MetaPixel />
-        <AuthProvider><ProductProvider><AppShell>{children}</AppShell></ProductProvider></AuthProvider>
+        <AuthProvider><SubscriptionAccessProvider><ProductProvider><AppShell>{children}</AppShell></ProductProvider></SubscriptionAccessProvider></AuthProvider>
       </body>
     </html>
   );

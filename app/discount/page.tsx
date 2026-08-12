@@ -7,13 +7,14 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { Brand } from "@/components/public/PublicChrome";
 import { StatusMessage } from "@/components/ui/status-message";
 import { hasCompletedOnboarding, hasPurchasedPrimaryPaywall, isFirstTimeFlowPending, trackPaywallEvent } from "@/lib/first-time-flow";
-import { loadSubscriptionAccess } from "@/lib/subscription-access-client";
+import { useSubscriptionAccess } from "@/components/subscription/SubscriptionAccessProvider";
 import { trackEvent } from "@/lib/analytics";
 import { trackTikTok } from "@/lib/tiktok";
 import { trackMeta } from "@/lib/meta";
 
 export default function DiscountPage() {
   const auth = useAuth();
+  const subscription = useSubscriptionAccess();
   const router = useRouter();
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -27,15 +28,11 @@ export default function DiscountPage() {
       return;
     }
     if (!auth.user) { router.replace("/login?returnTo=/discount"); return; }
-    let current = true;
-    void loadSubscriptionAccess(true).then(({ state }) => {
-      if (!current) return;
-      if (state !== "neverSubscribed") { router.replace("/dashboard"); return; }
-      trackPaywallEvent("discount_view"); trackEvent("view_subscription_paywall", { source: "discount" }); trackTikTok("ViewContent", { content_id: "discount_paywall", content_type: "product" }); trackMeta("ViewPaywall", { content_ids: ["discount_paywall"], content_type: "product" });
-      setReady(true);
-    }).catch(() => { if (current) router.replace("/dashboard"); });
-    return () => { current = false; };
-  }, [auth.configured, auth.loading, auth.user, router]);
+    if (subscription.loading || !subscription.access) return;
+    if (subscription.access.state !== "neverSubscribed") { router.replace("/dashboard"); return; }
+    trackPaywallEvent("discount_view"); trackEvent("view_subscription_paywall", { source: "discount" }); trackTikTok("ViewContent", { content_id: "discount_paywall", content_type: "product" }); trackMeta("ViewPaywall", { content_ids: ["discount_paywall"], content_type: "product" });
+    queueMicrotask(() => setReady(true));
+  }, [auth.configured, auth.loading, auth.user, router, subscription.access, subscription.loading]);
   function dismiss() { trackPaywallEvent("discount_dismissed"); router.push("/dashboard"); }
   async function purchase() {
     setMessage("");
