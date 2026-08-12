@@ -7,6 +7,7 @@ import { useAudioTranscription } from "@/hooks/useAudioTranscription";
 import { useProduct, type SavedNote } from "@/components/product/ProductProvider";
 import { Button } from "@/components/ui/button";
 import { StatusMessage } from "@/components/ui/status-message";
+import { GenerationIndicator } from "@/components/product/GenerationIndicator";
 import { CUSTOM_TEMPLATE_ID, getTemplatesForMode } from "@/lib/product-data";
 import { cn } from "@/lib/utils";
 
@@ -287,9 +288,7 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
               );
             })}
             {(status === "submitted" || (status === "streaming" && !messageText(messages.at(-1)))) && (
-              <div className="flex w-fit gap-1 rounded-2xl border border-[var(--border)] bg-[var(--card)] px-4 py-4">
-                {[0, 1, 2].map((dot) => <span className="size-1.5 animate-pulse rounded-full bg-[var(--primary)]" key={dot} style={{ animationDelay: `${dot * 120}ms` }} />)}
-              </div>
+              <GenerationIndicator />
             )}
             {latestText && status === "ready" && (
               <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-2">

@@ -6,6 +6,7 @@ import { useProduct, type SavedNote, type StoredAttachment } from "./ProductProv
 import { Button } from "@/components/ui/button";
 import { StatusMessage } from "@/components/ui/status-message";
 import { UpdateVoiceRecorder } from "./UpdateVoiceRecorder";
+import { GenerationIndicator } from "./GenerationIndicator";
 import { getMode, getTemplate } from "@/lib/product-data";
 
 export function HistoryWorkspace({ noteId, compact = false, onDeleted }: { noteId: string; compact?: boolean; onDeleted?: () => void }) {
@@ -140,7 +141,10 @@ export function HistoryWorkspace({ noteId, compact = false, onDeleted }: { noteI
           <span className="text-xs font-medium text-[var(--muted-foreground)]">{getMode(note.modeId).name} · {getTemplate(note.templateId).name}</span>
           <span aria-live="polite" className="ml-auto inline-flex items-center gap-1 text-[11px] font-medium text-[var(--foreground)]">{saveStatus === "saving" ? "Saving…" : <><Check className="size-3 text-[var(--primary)]" />Saved</>}</span>
         </div>
-        <textarea className={compact ? "min-h-64 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] p-3 text-xs leading-5 outline-none focus:border-[var(--primary)]" : "min-h-[480px] w-full rounded-xl border border-[var(--border)] bg-[var(--background)] p-4 text-sm leading-7 outline-none focus:border-[var(--primary)]"} onChange={(event) => changeDraft(event.target.value)} readOnly={product.historyReadOnly} value={draft} />
+        <div className="relative">
+          <textarea className={compact ? "min-h-64 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] p-3 text-xs leading-5 outline-none focus:border-[var(--primary)]" : "min-h-[480px] w-full rounded-xl border border-[var(--border)] bg-[var(--background)] p-4 text-sm leading-7 outline-none focus:border-[var(--primary)]"} onChange={(event) => changeDraft(event.target.value)} readOnly={product.historyReadOnly} value={draft} />
+          {(isUpdating || isSummarizing) && <GenerationIndicator className="absolute left-3 top-3" />}
+        </div>
         {(note.attachments?.length ?? 0) > 0 && <div className="mt-2 flex flex-wrap gap-1.5">{note.attachments?.map((item) => <span className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--primary-soft)] px-2.5 py-1.5 text-[10px] text-[var(--primary)]" key={item.id}>{item.name}<button disabled={product.historyReadOnly} aria-label={`Remove ${item.name}`} onClick={() => removeAttachment(item.id)}><X className="size-3" /></button></span>)}</div>}
         <div className="mt-3 flex flex-wrap gap-1">
           <Button onClick={() => navigator.clipboard.writeText(draft)} size="sm" variant="ghost"><Copy className="size-3.5" />Copy</Button>

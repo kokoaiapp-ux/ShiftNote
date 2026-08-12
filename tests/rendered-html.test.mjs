@@ -239,6 +239,25 @@ test("summarize, Nurse reports, Custom Documentation wording, and signup routing
   assert.match(provider, /summarizeHistory/);
 });
 
+test("AI generation feedback appears immediately and yields to streamed content", async () => {
+  const [chat, history, favorite, indicator] = await Promise.all([
+    readFile(new URL("../components/floating-assistant/ChatInterface.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/product/HistoryWorkspace.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/favorites/[id]/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/product/GenerationIndicator.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(chat, /status === "submitted"/);
+  assert.match(chat, /status === "streaming" && !messageText\(messages\.at\(-1\)\)/);
+  assert.match(chat, /<GenerationIndicator/);
+  assert.match(history, /\(isUpdating \|\| isSummarizing\) && <GenerationIndicator/);
+  assert.match(favorite, /isUpdating && <GenerationIndicator/);
+  assert.match(indicator, /Generating documentation\.\.\./);
+  assert.match(indicator, /Structuring your clinical note\.\.\./);
+  assert.match(indicator, /Reviewing clinical details\.\.\./);
+  assert.match(indicator, /Preparing your documentation\.\.\./);
+  assert.match(indicator, /animate-pulse/);
+});
+
 test("production authentication and billing redirects use the canonical ShiftNote origin", async () => {
   const [origin, auth, billing] = await Promise.all([
     readFile(new URL("../lib/app-url.ts", import.meta.url), "utf8"),

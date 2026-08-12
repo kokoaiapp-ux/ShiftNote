@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { StatusMessage } from "@/components/ui/status-message";
 import { Badge } from "@/components/ui/badge";
 import { UpdateVoiceRecorder } from "@/components/product/UpdateVoiceRecorder";
+import { GenerationIndicator } from "@/components/product/GenerationIndicator";
 import { getMode, getTemplate } from "@/lib/product-data";
 
 export default function FavoriteEditorPage() {
@@ -48,7 +49,10 @@ export default function FavoriteEditorPage() {
           <label className="text-xs font-medium text-[var(--muted-foreground)]" htmlFor="favorite-name">Favorite name</label>
           <input className="mt-2 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-sm font-semibold outline-none focus:border-[var(--primary)]" id="favorite-name" onChange={(event) => product.updateFavorite(favorite.id, { favoriteName: event.target.value })} value={favorite.favoriteName || favorite.title} />
           <div className="mt-5 flex items-center justify-between"><label className="text-xs font-medium text-[var(--muted-foreground)]" htmlFor="favorite-note">Saved documentation</label><span aria-live="polite" className="flex items-center gap-1 text-[11px] font-medium text-[var(--foreground)]"><Save className="size-3" /> Auto-saved</span></div>
-          <textarea className="mt-2 min-h-[480px] w-full resize-y rounded-xl border border-[var(--border)] bg-[var(--background)] p-4 text-sm leading-7 outline-none focus:border-[var(--primary)]" id="favorite-note" onChange={(event) => product.updateFavorite(favorite.id, { preview: event.target.value })} value={favorite.preview} />
+          <div className="relative">
+            <textarea className="mt-2 min-h-[480px] w-full resize-y rounded-xl border border-[var(--border)] bg-[var(--background)] p-4 text-sm leading-7 outline-none focus:border-[var(--primary)]" id="favorite-note" onChange={(event) => product.updateFavorite(favorite.id, { preview: event.target.value })} value={favorite.preview} />
+            {isUpdating && <GenerationIndicator className="absolute left-3 top-5" />}
+          </div>
         </section>
         <aside className="space-y-4">
           <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5">
