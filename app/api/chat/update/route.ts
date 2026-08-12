@@ -20,14 +20,17 @@ export async function POST(request: Request) {
     newInformation,
     modeId,
     templateId,
+    operation,
   }: {
     existingNote?: string;
     newInformation?: string;
     modeId?: string;
     templateId?: string;
+    operation?: "update" | "summarize";
   } = await request.json();
 
-  if (!existingNote?.trim() || !newInformation?.trim() || !modeId || !templateId) {
+  const isSummarize = operation === "summarize";
+  if (!existingNote?.trim() || (!isSummarize && !newInformation?.trim()) || !modeId || !templateId) {
     return Response.json({ error: "Existing documentation, new information, mode, and template are required." }, { status: 400 });
   }
 
@@ -36,13 +39,19 @@ export async function POST(request: Request) {
   const result = streamText({
     model: openai(process.env.OPENAI_MODEL),
     temperature: 0.1,
-    system: `You update existing clinical documentation and do not generate an unrelated replacement.
+    system: isSummarize ? `You concisely rewrite existing clinical documentation.
+Professional mode: ${mode.name}. Use only ${mode.terminology}.
+Document type: ${template.name}.
+Preserve every important clinical fact, chronology, professional term, and medically relevant detail.
+Do not invent facts. Remove unnecessary headings, repetition, spacing, and paragraph breaks.
+Return one continuous polished professional note suitable for EMR or EHR copy and paste, with no preamble or commentary.` : `You update existing clinical documentation and do not generate an unrelated replacement.
 Professional mode: ${mode.name}. Use only ${mode.terminology}.
 Document type: ${template.name}.
 Preserve accurate existing content, incorporate only the supplied new information, and do not invent facts.
 Use natural professional writing and do not use dash based lists.
 Return only the complete updated documentation with no preamble or commentary.`,
-    prompt: `EXISTING DOCUMENTATION:
+    prompt: isSummarize ? `DOCUMENTATION TO SUMMARIZE:
+${existingNote}` : `EXISTING DOCUMENTATION:
 ${existingNote}
 
 NEW INFORMATION:

@@ -1,11 +1,11 @@
 "use client";
 
-import { Check, Copy, CopyPlus, FilePlus2, Mic, Save, Sparkles, Star, Trash2, X } from "lucide-react";
+import { AlignLeft, Check, Copy, CopyPlus, FilePlus2, Save, Sparkles, Star, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useProduct, type SavedNote, type StoredAttachment } from "./ProductProvider";
 import { Button } from "@/components/ui/button";
 import { StatusMessage } from "@/components/ui/status-message";
-import { useAudioTranscription } from "@/hooks/useAudioTranscription";
+import { UpdateVoiceRecorder } from "./UpdateVoiceRecorder";
 import { getMode, getTemplate } from "@/lib/product-data";
 
 export function HistoryWorkspace({ noteId, compact = false, onDeleted }: { noteId: string; compact?: boolean; onDeleted?: () => void }) {
@@ -16,27 +16,12 @@ export function HistoryWorkspace({ noteId, compact = false, onDeleted }: { noteI
   const [newInformation, setNewInformation] = useState(() => note?.pendingInformation ?? "");
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving">("saved");
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isSummarizing, setIsSummarizing] = useState(false);
+  const [isVoiceBusy, setIsVoiceBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
-  const [voiceStarted, setVoiceStarted] = useState(false);
   const saveTimerRef = useRef<number | null>(null);
   const pendingChangesRef = useRef<Partial<Pick<SavedNote, "preview" | "attachments" | "pendingInformation">>>({});
-  const voiceBaseRef = useRef("");
-
-  const handleTranscript = useCallback((text: string) => {
-    const value = [voiceBaseRef.current, text].filter(Boolean).join(" ");
-    setNewInformation(value);
-    setSaveStatus("saving");
-    pendingChangesRef.current = { ...pendingChangesRef.current, pendingInformation: value };
-    if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = window.setTimeout(() => {
-      const changes = pendingChangesRef.current;
-      pendingChangesRef.current = {};
-      updateHistoryNote(noteId, changes, "auto-save");
-      setSaveStatus("saved");
-    }, 1200);
-  }, [noteId, updateHistoryNote]);
-  const speech = useAudioTranscription({ onTranscript: handleTranscript });
 
   const flushPending = useCallback(() => {
     if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
@@ -81,13 +66,13 @@ export function HistoryWorkspace({ noteId, compact = false, onDeleted }: { noteI
     setSaveStatus("saved");
   }
 
-  async function updateWithAI() {
-    if (!newInformation.trim()) return;
+  async function updateWithAI(information = newInformation) {
+    if (!information.trim()) return;
     setIsUpdating(true);
     setError(null);
     saveNow();
     try {
-      const updated = await product.updateHistoryWithAI(note!.id, newInformation.trim(), draft);
+      const updated = await product.updateHistoryWithAI(note!.id, information.trim(), draft);
       setDraft(updated);
       setNewInformation("");
       setSaveStatus("saved");
@@ -95,6 +80,21 @@ export function HistoryWorkspace({ noteId, compact = false, onDeleted }: { noteI
       setError(caught instanceof Error ? caught.message : "Unable to update this documentation.");
     } finally {
       setIsUpdating(false);
+    }
+  }
+
+  async function summarize() {
+    setIsSummarizing(true);
+    setError(null);
+    saveNow();
+    try {
+      const updated = await product.summarizeHistory(note!.id, draft);
+      setDraft(updated);
+      setSaveStatus("saved");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Unable to summarize this documentation.");
+    } finally {
+      setIsSummarizing(false);
     }
   }
 
@@ -147,6 +147,7 @@ export function HistoryWorkspace({ noteId, compact = false, onDeleted }: { noteI
           <Button disabled={product.historyReadOnly} onClick={() => saveNow()} size="sm" variant="ghost"><Save className="size-3.5" />Save</Button>
           <Button disabled={product.historyReadOnly} onClick={addFavorite} size="sm" variant="ghost"><Star className="size-3.5" />Favorite</Button>
           <Button disabled={product.historyReadOnly} onClick={() => product.saveCustomTemplate({ modeId: note.modeId, name: note.title, description: "Created from saved documentation", content: draft })} size="sm" variant="ghost"><FilePlus2 className="size-3.5" />Template</Button>
+          <Button disabled={product.historyReadOnly || isSummarizing} onClick={() => void summarize()} size="sm" variant="ghost"><AlignLeft className="size-3.5" />{isSummarizing ? "Summarizing…" : "Summarize"}</Button>
           <Button disabled={product.historyReadOnly} onClick={() => product.saveToHistory({ ...note, id: crypto.randomUUID(), title: `${note.title} copy`, preview: draft, createdAt: new Date().toISOString(), lastUpdated: new Date().toISOString() })} size="sm" variant="ghost"><CopyPlus className="size-3.5" />Duplicate</Button>
           <label className={product.historyReadOnly ? "hidden" : "inline-flex h-9 cursor-pointer items-center rounded-lg px-3 text-xs font-medium hover:bg-[var(--muted)]"}>Attach<input accept=".pdf,.doc,.docx,.txt,image/*" className="hidden" multiple onChange={(event) => { void addAttachments(event.target.files); event.target.value = ""; }} type="file" /></label>
           <Button disabled={product.historyReadOnly} onClick={() => { product.deleteHistory(note.id); onDeleted?.(); }} size="sm" variant="ghost"><Trash2 className="size-3.5" />Delete</Button>
@@ -158,15 +159,14 @@ export function HistoryWorkspace({ noteId, compact = false, onDeleted }: { noteI
           <h3 className="text-sm font-semibold">Update with AI</h3>
           <p className="mt-1 text-[11px] leading-4 text-[var(--muted-foreground)]">Add only the new information. Existing sections are preserved unless affected.</p>
           <textarea className="mt-3 min-h-28 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] p-3 text-xs leading-5 outline-none focus:border-[var(--primary)]" onChange={(event) => { setNewInformation(event.target.value); scheduleSave({ pendingInformation: event.target.value }); }} placeholder="Type or dictate additional information…" readOnly={product.historyReadOnly} value={newInformation} />
-          <div className="mt-2 flex gap-2">
-            <Button disabled={product.historyReadOnly || speech.isTranscribing} onClick={() => {
-              if (speech.isListening) void speech.stopListening();
-              else { voiceBaseRef.current = newInformation.trim(); setVoiceStarted(true); void speech.startListening(voiceStarted); }
-            }} size="sm" variant={speech.isListening ? "default" : "outline"}><Mic className="size-3.5" />{speech.isTranscribing ? "Transcribing…" : speech.isListening ? "Stop" : voiceStarted ? "Continue" : "Voice"}</Button>
-            {voiceStarted && <Button onClick={() => { speech.cancel(); setNewInformation(voiceBaseRef.current); setVoiceStarted(false); }} size="sm" variant="ghost">Cancel</Button>}
-          </div>
-          {(error || speech.error) && <StatusMessage className="mt-2" title="Unable to update documentation" variant="error">{error || speech.error}</StatusMessage>}
-          <Button className="mt-3 w-full" disabled={product.historyReadOnly || !newInformation.trim() || isUpdating || speech.isListening || speech.isTranscribing} onClick={updateWithAI}><Sparkles className="size-4" />{isUpdating ? "Updating…" : "Update with AI"}</Button>
+          <UpdateVoiceRecorder disabled={product.historyReadOnly || isUpdating} onBusyChange={setIsVoiceBusy} onSend={async (transcript) => {
+            const information = [newInformation.trim(), transcript].filter(Boolean).join(" ");
+            setNewInformation(information);
+            scheduleSave({ pendingInformation: information });
+            await updateWithAI(information);
+          }} />
+          {error && <StatusMessage className="mt-2" title="Unable to update documentation" variant="error">{error}</StatusMessage>}
+          <Button className="mt-3 w-full" disabled={product.historyReadOnly || !newInformation.trim() || isUpdating || isVoiceBusy} onClick={() => void updateWithAI()}><Sparkles className="size-4" />{isUpdating ? "Updating…" : "Update with AI"}</Button>
         </section>
         <section className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4">
           <h3 className="text-sm font-semibold">Version History</h3>

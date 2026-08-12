@@ -197,17 +197,24 @@ test("MediaRecorder audio is uploaded to OpenAI and inserts the returned transcr
 });
 
 test("summarize, Nurse reports, Custom Documentation wording, and signup routing stay scoped", async () => {
-  const [chat, data, landing, signup, onboarding, history] = await Promise.all([
+  const [chat, data, landing, signup, onboarding, history, favorite, recorder, updateRoute, provider] = await Promise.all([
     readFile(new URL("../components/floating-assistant/ChatInterface.tsx", import.meta.url), "utf8"),
     readFile(new URL("../lib/product-data.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/auth/AuthCard.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/onboarding/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/product/HistoryWorkspace.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/favorites/[id]/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/product/UpdateVoiceRecorder.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/chat/update/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../components/product/ProductProvider.tsx", import.meta.url), "utf8"),
   ]);
   assert.match(chat, /label="Summarize"/);
   assert.match(chat, /one concise continuous professional note with no paragraph breaks/);
   assert.match(chat, /Preserve all important clinical information, chronology, professional terminology, and medical accuracy/);
+  assert.match(chat, /Already saved/);
+  assert.match(chat, /savedResponsesRef/);
+  assert.match(chat, /product\.history\.some/);
   assert.match(chat, /Start your Custom Documentation/);
   assert.match(chat, /Describe the patient's condition or tap the microphone to speak\. ShiftNote will generate your documentation\./);
   assert.match(chat, /Start your \$\{product\.template\.name\}/);
@@ -216,7 +223,20 @@ test("summarize, Nurse reports, Custom Documentation wording, and signup routing
   assert.equal((landing.match(/href="\/signup"/g) || []).length, 2);
   assert.match(signup, /mode === "signup" \? \(params\.get\("returnTo"\) \|\| "\/onboarding"\)/);
   assert.match(onboarding, /router\.push\("\/subscription\?source=onboarding"\)/);
-  assert.match(history, /useAudioTranscription/);
+  assert.match(history, /UpdateVoiceRecorder/);
+  assert.match(favorite, /UpdateVoiceRecorder/);
+  assert.match(recorder, /useAudioTranscription/);
+  assert.match(recorder, /Recording microphone/);
+  assert.match(recorder, /Preview/);
+  assert.match(recorder, /Continue/);
+  assert.match(recorder, /Send voice recording/);
+  assert.match(recorder, /const MAX_RECORDING_SECONDS = 150/);
+  assert.match(history, /"Summarize"/);
+  assert.match(history, /product.summarizeHistory/);
+  assert.match(updateRoute, /operation === "summarize"/);
+  assert.match(updateRoute, /one continuous polished professional note/);
+  assert.match(provider, /operation: "update" \| "summarize"/);
+  assert.match(provider, /summarizeHistory/);
 });
 
 test("production authentication and billing redirects use the canonical ShiftNote origin", async () => {

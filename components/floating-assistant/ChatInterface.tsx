@@ -48,6 +48,7 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
   const recordingOffsetRef = useRef(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewAudioRef = useRef<HTMLAudioElement>(null);
+  const savedResponsesRef = useRef(new Set<string>());
   const latestAssistant = [...messages].reverse().find((message) => message.role === "assistant");
   const latestText = messageText(latestAssistant);
   const isGenerating = status === "submitted" || status === "streaming";
@@ -139,6 +140,19 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
   async function copyNote() {
     await navigator.clipboard.writeText(latestText);
     showSuccess("copy");
+  }
+
+  function saveNote() {
+    const alreadySaved = savedResponsesRef.current.has(latestText) || product.history.some((note) =>
+      note.preview === latestText && note.modeId === product.mode.id && note.templateId === product.template.id
+    );
+    if (alreadySaved) {
+      showSuccess("already-saved");
+      return;
+    }
+    savedResponsesRef.current.add(latestText);
+    product.saveToHistory(makeNote());
+    showSuccess("save");
   }
 
   async function startRecording() {
@@ -282,7 +296,7 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
                 <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--muted-foreground)]">Documentation actions</p>
                 <div className="flex flex-wrap gap-1">
                   <ActionButton active={actionSuccess === "copy"} icon={Copy} label="Copy" successLabel="Copied" onClick={copyNote} />
-                  <ActionButton active={actionSuccess === "save"} icon={Save} label="Save" successLabel="Saved" onClick={() => { product.saveToHistory(makeNote()); showSuccess("save"); }} />
+                  <ActionButton active={actionSuccess === "save" || actionSuccess === "already-saved"} icon={Save} label="Save" successLabel={actionSuccess === "already-saved" ? "Already saved" : "Saved"} onClick={saveNote} />
                   <ActionButton active={actionSuccess === "favorite"} icon={Star} label="Favorite" successLabel="Added to Favorites" onClick={addToFavorites} />
                   <ActionButton active={actionSuccess === "template"} icon={FilePlus2} label="Template" successLabel="Saved as Template" onClick={() => { setCustomName(product.template.name); setTemplateDialogOpen(true); }} />
                   <ActionButton active={actionSuccess === "edit"} icon={Pencil} label="Edit" successLabel="Changes Saved" onClick={() => { setInput(`Revise this ${product.template.name}: `); showSuccess("edit"); }} />
