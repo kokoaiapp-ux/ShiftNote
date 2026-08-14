@@ -258,6 +258,24 @@ test("AI generation feedback appears immediately and yields to streamed content"
   assert.match(indicator, /animate-pulse/);
 });
 
+test("mobile Copilot constrains scrolling to messages and stacks the composer", async () => {
+  const [shell, page, chat] = await Promise.all([
+    readFile(new URL("../components/product/AppShell.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/copilot/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/floating-assistant/ChatInterface.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(shell, /pathname === "\/copilot"/);
+  assert.match(shell, /h-\[calc\(100dvh-4rem\)\] overflow-hidden/);
+  assert.match(page, /flex h-full min-h-0 flex-col/);
+  assert.match(page, /grid min-h-0 flex-1/);
+  assert.match(page, /hidden flex-wrap items-end justify-between gap-4 md:flex/);
+  assert.match(page, /hidden space-y-4 xl:block/);
+  assert.match(chat, /min-h-0 flex-1 overflow-y-auto/);
+  assert.match(chat, /flex flex-wrap items-end gap-1/);
+  assert.match(chat, /order-first[\s\S]*basis-full[\s\S]*sm:order-none/);
+  assert.match(chat, /ml-auto grid size-10[\s\S]*sm:ml-0/);
+});
+
 test("production authentication and billing redirects use the canonical ShiftNote origin", async () => {
   const [origin, auth, billing] = await Promise.all([
     readFile(new URL("../lib/app-url.ts", import.meta.url), "utf8"),

@@ -95,7 +95,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="grid size-9 place-items-center rounded-full bg-[#d6c0a5] text-xs font-semibold text-[#4b3827]">{(auth.user?.displayName || auth.user?.email || "SN").split(/\s|@/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("")}</div>
           </div>
         </header>
-        <main className="mx-auto max-w-[1440px] p-5 md:p-8">{children}</main>
+        <main className={cn("mx-auto max-w-[1440px]", pathname === "/copilot" ? "h-[calc(100dvh-4rem)] overflow-hidden p-3 md:h-auto md:overflow-visible md:p-8" : "p-5 md:p-8")}>{children}</main>
       </div>
       <FloatingAssistant />
     </div>
