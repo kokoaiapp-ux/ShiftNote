@@ -1,7 +1,7 @@
 import { requireSupabase } from "@/lib/supabase";
-import type { SubscriptionAccessState } from "@/lib/server/subscription-access";
+import type { SubscriptionAccess } from "@/lib/server/subscription-access";
 
-export type AccessResult = { state: SubscriptionAccessState; hasSubscribedBefore: boolean; isFounder: boolean; expiresAt: string | null };
+export type AccessResult = SubscriptionAccess;
 let cached: { userId: string; result: AccessResult; expiresAt: number } | null = null;
 let pending: Promise<AccessResult> | null = null;
 

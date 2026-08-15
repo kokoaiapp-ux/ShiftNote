@@ -1,4 +1,4 @@
-import { requireRevenueCatPro } from "@/lib/server/revenuecat";
+import { requireProAccess } from "@/lib/server/subscription-access";
 import { streamText } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { getMode, getTemplate } from "@/lib/product-data";
@@ -7,7 +7,7 @@ export const runtime = "edge";
 export const maxDuration = 30;
 
 export async function POST(request: Request) {
-  try { await requireRevenueCatPro(request); } catch (error) { const code = error instanceof Error ? error.message : ""; return Response.json({ error: code === "PRO_REQUIRED" ? "ShiftNote Pro is required." : "Sign in to use AI Copilot." }, { status: code === "PRO_REQUIRED" ? 403 : 401 }); }
+  try { await requireProAccess(request); } catch (error) { const code = error instanceof Error ? error.message : ""; return Response.json({ error: code === "PRO_REQUIRED" ? "ShiftNote Pro is required." : code === "SUBSCRIPTION_ACCESS_UNAVAILABLE" ? "Subscription access is temporarily unavailable." : "Sign in to use AI Copilot." }, { status: code === "PRO_REQUIRED" ? 403 : code === "SUBSCRIPTION_ACCESS_UNAVAILABLE" ? 503 : 401 }); }
   if (!process.env.OPENAI_API_KEY || !process.env.OPENAI_MODEL) {
     return Response.json(
       { error: "AI is not configured. Add OPENAI_API_KEY and OPENAI_MODEL to .env.local." },

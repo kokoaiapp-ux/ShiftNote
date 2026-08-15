@@ -55,7 +55,7 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
     void loadWorkspace(requireSupabase(), auth.user.id).then((snapshot) => {
       if (!active) return;
       const preferences = snapshot.preferences;
-      setModeId(preferences?.last_selected_mode || auth.profile?.default_mode || "nurse"); setTemplateId(preferences?.last_selected_template || CUSTOM_TEMPLATE_ID); setThemeState(preferences?.theme || "system"); setCompactState(preferences?.compact_mode || false); setPrimaryColorState(preferences?.primary_color || "#176b4c"); setFavorites(snapshot.favorites); setHistory(snapshot.history); setCustomTemplates(snapshot.customTemplates); setHistoryReadOnly(snapshot.historyReadOnly); setWorkspaceLoaded(true);
+      setModeId(preferences?.last_selected_mode || auth.profile?.default_mode || "nurse"); setTemplateId(preferences?.last_selected_template || CUSTOM_TEMPLATE_ID); setThemeState(preferences?.theme || "system"); setCompactState(preferences?.compact_mode || false); setPrimaryColorState(preferences?.primary_color || "#176b4c"); setFavorites(snapshot.favorites); setHistory(snapshot.history); setCustomTemplates(snapshot.customTemplates); setWorkspaceLoaded(true);
     }).catch(() => { reportPersistenceError(); if (active) setWorkspaceLoaded(true); });
     return () => { active = false; };
   }, [auth.configured, auth.loading, auth.profile?.default_mode, auth.user]);

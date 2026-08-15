@@ -9,7 +9,6 @@ export type WorkspaceSnapshot = {
   history: SavedNote[];
   favorites: SavedNote[];
   customTemplates: CustomTemplate[];
-  historyReadOnly: boolean;
 };
 
 function content(message: Tables<"messages">) { return message.edited_message || message.message; }
@@ -19,15 +18,14 @@ function noteFrom(conversation: Tables<"conversations">, message: Tables<"messag
 function assertNoError(error: { message: string } | null) { if (error) throw new Error(error.message); }
 
 export async function loadWorkspace(client: Client, userId: string): Promise<WorkspaceSnapshot> {
-  const [preferencesResult, conversationsResult, messagesResult, favoritesResult, templatesResult, cacheResult] = await Promise.all([
+  const [preferencesResult, conversationsResult, messagesResult, favoritesResult, templatesResult] = await Promise.all([
     client.from("user_preferences").select("*").eq("user_id", userId).maybeSingle(),
     client.from("conversations").select("*").eq("user_id", userId).order("updated_at", { ascending: false }),
     client.from("messages").select("*").eq("user_id", userId).order("created_at", { ascending: true }),
     client.from("favorites").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
     client.from("custom_templates").select("*").eq("user_id", userId).order("updated_at", { ascending: false }),
-    client.from("stripe_subscriptions").select("status,current_period_end,cancel_at_period_end").eq("user_id", userId).order("updated_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
-  for (const result of [preferencesResult, conversationsResult, messagesResult, favoritesResult, templatesResult, cacheResult]) assertNoError(result.error);
+  for (const result of [preferencesResult, conversationsResult, messagesResult, favoritesResult, templatesResult]) assertNoError(result.error);
   const conversations = conversationsResult.data || [];
   const messages = messagesResult.data || [];
   const byConversation = new Map<string, Tables<"messages">[]>();
@@ -44,9 +42,7 @@ export async function loadWorkspace(client: Client, userId: string): Promise<Wor
     return message && conversation ? [noteFrom(conversation, message, favorite.id)] : [];
   });
   const customTemplates = (templatesResult.data || []).map((template) => ({ id: template.id, modeId: template.mode, name: template.template_name, description: template.description || "Custom documentation template", content: template.template_content, createdAt: template.created_at }));
-  const status = cacheResult.data?.status;
-  const expiredByDate = cacheResult.data?.current_period_end ? new Date(cacheResult.data.current_period_end).getTime() < Date.now() : false;
-  return { preferences: preferencesResult.data, history, favorites, customTemplates, historyReadOnly: status === "expired" || status === "canceled" || expiredByDate };
+  return { preferences: preferencesResult.data, history, favorites, customTemplates };
 }
 
 export async function savePreferences(client: Client, userId: string, values: Database["public"]["Tables"]["user_preferences"]["Update"]) {

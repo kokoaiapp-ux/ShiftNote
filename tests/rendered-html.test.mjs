@@ -272,8 +272,8 @@ test("mobile Copilot constrains scrolling to messages and stacks the composer", 
   assert.match(page, /hidden space-y-4 xl:block/);
   assert.match(chat, /min-h-0 flex-1 overflow-y-auto/);
   assert.match(chat, /flex flex-wrap items-end gap-1/);
-  assert.match(chat, /order-first[\s\S]*basis-full[\s\S]*sm:order-none/);
-  assert.match(chat, /ml-auto grid size-10[\s\S]*sm:ml-0/);
+  assert.match(chat, /order-first[\s\S]*basis-full/);
+  assert.doesNotMatch(chat, /sm:order-none|sm:flex-nowrap|sm:ml-0/);
 });
 
 test("production authentication and billing redirects use the canonical ShiftNote origin", async () => {
@@ -536,12 +536,22 @@ test("founder access is database-assigned and enforced by shared server authoriz
   assert.match(migration, /revoke update on public\.profiles from authenticated/);
   assert.match(migration, /grant update \(full_name, profession, workplace, default_mode, emr, place_of_work\)/);
   assert.match(roles, /data\?\.role === "founder"/);
-  assert.match(revenueCat, /if \(await hasFounderRole\(admin,user\.id\)\) return/);
+  assert.doesNotMatch(revenueCat, /hasFounderRole|requireRevenueCatPro/);
   assert.match(access, /isFounder: true/);
+  assert.match(access, /CACHE_MAX_AGE_MS/);
+  assert.match(access, /cacheCondition/);
+  assert.match(access, /refreshRevenueCatOnce/);
+  assert.match(access, /revenueCatRefreshes/);
+  assert.match(access, /isTrial/);
+  assert.match(access, /isPromotional/);
+  assert.match(access, /provider/);
+  assert.match(access, /plan/);
+  assert.match(access, /status/);
+  assert.match(access, /requireProAccess/);
   assert.doesNotMatch(accessClient, /kokoaiapp@gmail\.com/);
   assert.match(subscription, /subscription\.access\?\.isFounder/);
   assert.match(settings, /subscription\.access\?\.state === 'activeSubscription'/);
-  assert.match(transcribe, /requireRevenueCatPro\(request\)/);
+  assert.match(transcribe, /requireProAccess\(request\)/);
 });
 
 function contrastRatio(first, second) {
