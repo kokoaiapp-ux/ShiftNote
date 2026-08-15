@@ -188,6 +188,7 @@ export type Database = {
           completed_at: string | null
           created_at: string
           documentation_goal: string | null
+          discovery_source: string | null
           emr_platform: string | null
           id: string
           onboarding_completed: boolean
@@ -205,6 +206,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           documentation_goal?: string | null
+          discovery_source?: string | null
           emr_platform?: string | null
           id?: string
           onboarding_completed?: boolean
@@ -222,6 +224,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           documentation_goal?: string | null
+          discovery_source?: string | null
           emr_platform?: string | null
           id?: string
           onboarding_completed?: boolean

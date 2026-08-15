@@ -480,6 +480,26 @@ test("subscription flow gates the primary paywall, preserves the discount until 
   assert.match(env, /STRIPE_PROMOTIONAL_SIX_MONTH_RETENTION_PRICE_ID=/);
 });
 
+test("onboarding captures a required discovery source before the final step", async () => {
+  const [onboarding, auth, migration, databaseTypes] = await Promise.all([
+    readFile(new URL("../app/onboarding/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/auth/AuthProvider.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../supabase/migrations/202608150001_onboarding_discovery_source.sql", import.meta.url), "utf8"),
+    readFile(new URL("../types/database.ts", import.meta.url), "utf8"),
+  ]);
+  assert.ok(onboarding.indexOf('key:"discovery_source"') < onboarding.indexOf('key:"documentation"'));
+  assert.match(onboarding, /How did you hear about ShiftNote\?/);
+  assert.match(onboarding, /Help us understand what's working so we can continue improving ShiftNote\./);
+  for (const label of ["TikTok", "Instagram", "Facebook", "Reddit", "Flyer", "A Friend or Colleague", "Google Search", "Other"]) assert.match(onboarding, new RegExp(label));
+  for (const value of ["tiktok", "instagram", "facebook", "reddit", "flyer", "friend", "google_search", "other"]) assert.match(onboarding, new RegExp(`\\b${value}\\b`));
+  assert.match(onboarding, /if\(!value\)/);
+  assert.match(onboarding, /q\.key!=="discovery_source"/);
+  assert.match(auth, /trackEvent\("onboarding_completed", \{ discovery_source: data\.discovery_source \}\)/);
+  assert.match(migration, /add column discovery_source text/);
+  assert.match(migration, /onboarding_answers_discovery_source_check/);
+  assert.match(migration, /discovery_source = excluded\.discovery_source/);
+  assert.match(databaseTypes, /discovery_source: string \| null/);
+});
 test("Pro routes use global server-backed subscription access without per-route authorization flashes", async () => {
   const [shell, floating, provider, layout, subscription, discount, access, accessRoute, stripeWebhook, migration] = await Promise.all([
     readFile(new URL("../components/product/AppShell.tsx", import.meta.url), "utf8"),

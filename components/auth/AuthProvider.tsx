@@ -11,7 +11,7 @@ import { consumePendingAuthEvent, trackEvent } from "@/lib/analytics";
 import { consumePendingTikTokAuthEvent, setPendingTikTokAuthEvent, trackTikTok } from "@/lib/tiktok";
 import { consumePendingMetaAuthEvent, setPendingMetaAuthEvent, trackMeta } from "@/lib/meta";
 
-type OnboardingData = { profession: string; workplace: string; experience: string; emr: string; documentation: string; specialty?: string };
+type OnboardingData = { profession: string; workplace: string; experience: string; emr: string; documentation: string; discovery_source: "tiktok" | "instagram" | "facebook" | "reddit" | "flyer" | "friend" | "google_search" | "other"; specialty?: string };
 export type AuthUser = User & { uid: string; displayName: string | null };
 type SignUpResult = { emailConfirmationRequired: boolean };
 type AccountData = { profile: Tables<"profiles"> | null; onboarding: Tables<"onboarding_answers"> | null; preferences: Tables<"user_preferences"> | null };
@@ -67,9 +67,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const payload = { ...data, preferred_default_mode: selectedMode, default_mode: selectedMode } as unknown as Json;
       const { error } = await requireSupabase().rpc("complete_onboarding", { payload });
       if (error) throw error;
-      trackEvent("onboarding_completed");
-      trackTikTok("CompleteOnboarding");
-      trackMeta("CompleteOnboarding");
+      trackEvent("onboarding_completed", { discovery_source: data.discovery_source });
+      trackTikTok("CompleteOnboarding", { discovery_source: data.discovery_source });
+      trackMeta("CompleteOnboarding", { discovery_source: data.discovery_source });
       localStorage.setItem("shiftnote-onboarding-draft", JSON.stringify(data));
       markOnboardingComplete();
       setAccount((current) => ({
