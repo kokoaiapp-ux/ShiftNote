@@ -13,15 +13,14 @@ import { consumePendingMetaAuthEvent, setPendingMetaAuthEvent, trackMeta } from 
 
 type OnboardingData = { profession: string; workplace: string; experience: string; emr: string; documentation: string; discovery_source: "tiktok" | "instagram" | "facebook" | "reddit" | "flyer" | "friend" | "google_search" | "other"; specialty?: string };
 export type AuthUser = User & { uid: string; displayName: string | null };
-type SignUpResult = { emailConfirmationRequired: boolean };
 type AccountData = { profile: Tables<"profiles"> | null; onboarding: Tables<"onboarding_answers"> | null; preferences: Tables<"user_preferences"> | null };
-type AuthContextValue = AccountData & { user: AuthUser | null; loading: boolean; configured: boolean; signInEmail(email: string, password: string): Promise<void>; signUpEmail(name: string, email: string, password: string): Promise<SignUpResult>; signInGoogle(next?: string): Promise<void>; signInApple(next?: string): Promise<void>; resetPassword(email: string): Promise<void>; updatePassword(password: string): Promise<void>; signOut(): Promise<void>; accessToken(): Promise<string | null>; saveOnboarding(data: OnboardingData): Promise<void> };
+type AuthContextValue = AccountData & { user: AuthUser | null; loading: boolean; configured: boolean; signInEmail(email: string, password: string): Promise<void>; signUpEmail(name: string, email: string, password: string): Promise<void>; signInGoogle(next?: string): Promise<void>; signInApple(next?: string): Promise<void>; resetPassword(email: string): Promise<void>; updatePassword(password: string): Promise<void>; signOut(): Promise<void>; accessToken(): Promise<string | null>; saveOnboarding(data: OnboardingData): Promise<void> };
 const AuthContext = createContext<AuthContextValue | null>(null);
 const emptyAccount: AccountData = { profile: null, onboarding: null, preferences: null };
 
 function adapt(user: User | null): AuthUser | null { if (!user) return null; return Object.assign(user, { uid: user.id, displayName: String(user.user_metadata?.display_name || user.user_metadata?.full_name || "") || null }); }
 function safeNext(value = "/dashboard") { return value.startsWith("/") && !value.startsWith("//") ? value : "/dashboard"; }
-export function friendlyAuthError(error: unknown) { const message = error instanceof Error ? error.message : "Authentication could not be completed."; if (/invalid login credentials/i.test(message)) return "The email or password is incorrect."; if (/email not confirmed/i.test(message)) return "Verify your email address before signing in."; if (/already registered|already exists/i.test(message)) return "An account already uses this email."; if (/password/i.test(message) && /weak|characters/i.test(message)) return "Use a password with at least 8 characters."; return "Authentication could not be completed. Please try again."; }
+export function friendlyAuthError(error: unknown) { const message = error instanceof Error ? error.message : "Authentication could not be completed."; if (/invalid login credentials/i.test(message)) return "The email or password is incorrect."; if (/already registered|already exists/i.test(message)) return "An account already uses this email."; if (/password/i.test(message) && /weak|characters/i.test(message)) return "Use a password with at least 8 characters."; return "Authentication could not be completed. Please try again."; }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -55,7 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value: AuthContextValue = {
     user, loading, configured: supabaseConfigured, ...account,
     async signInEmail(email, password) { const { error } = await requireSupabase().auth.signInWithPassword({ email, password }); if (error) throw error; trackTikTok("Login", { method: "email" }); trackMeta("Login", { method: "email" }); },
-    async signUpEmail(name, email, password) { const { data, error } = await requireSupabase().auth.signUp({ email, password, options: { data: { display_name: name }, emailRedirectTo: `${browserAppUrl()}/auth/callback?next=${encodeURIComponent("/onboarding")}` } }); if (error) throw error; trackTikTok("CompleteRegistration", { method: "email" }); trackMeta("CompleteRegistration", { method: "email" }); return { emailConfirmationRequired: !data.session }; },
+    async signUpEmail(name, email, password) { const { data, error } = await requireSupabase().auth.signUp({ email, password, options: { data: { display_name: name } } }); if (error) throw error; if (!data.session) throw new Error("Signup did not create a session. Confirm Email must be disabled in Supabase."); trackTikTok("CompleteRegistration", { method: "email" }); trackMeta("CompleteRegistration", { method: "email" }); },
     signInGoogle(next) { return oauth("google", next); },
     signInApple(next) { return oauth("apple", next); },
     async resetPassword(email) { const { error } = await requireSupabase().auth.resetPasswordForEmail(email, { redirectTo: `${browserAppUrl()}/auth/callback?next=${encodeURIComponent("/update-password")}` }); if (error) throw error; },

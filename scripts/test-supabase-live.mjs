@@ -30,7 +30,10 @@ try {
   assert.equal((await rows(`profiles?auth_user_id=eq.${ids.one}`, tokenOne)).length, 1, "profile trigger");
   assert.equal((await rows(`onboarding_answers?user_id=eq.${ids.one}`, tokenOne)).length, 1, "onboarding trigger");
   assert.equal((await rows(`user_preferences?user_id=eq.${ids.one}`, tokenOne)).length, 1, "preferences trigger");
-  await call("/rest/v1/rpc/complete_onboarding", { token: tokenOne, method: "POST", body: { payload: { profession: "Nurse", workplace: "Hospital", experience: "5-10 years", emr: "Epic", documentation: "Progress notes", preferred_default_mode: "nurse" } } });
+  await call("/rest/v1/rpc/complete_onboarding", { token: tokenOne, method: "POST", body: { payload: { profession: "Nurse", workplace: "Hospital", experience: "5-10 years", emr: "Epic", documentation: "Progress notes", discovery_source: "friend", preferred_default_mode: "nurse" } } });
+  const completedOnboarding = await rows(`onboarding_answers?user_id=eq.${ids.one}&select=discovery_source,answers`, tokenOne);
+  assert.equal(completedOnboarding[0].discovery_source, "friend", "discovery source saved to onboarding column");
+  assert.equal(completedOnboarding[0].answers.discovery_source, "friend", "discovery source retained in onboarding payload");
   const completedProfile = await rows(`profiles?auth_user_id=eq.${ids.one}&select=profession,emr,place_of_work,default_mode`, tokenOne);
   assert.deepEqual(completedProfile[0], { profession: "Nurse", emr: "Epic", place_of_work: "Hospital", default_mode: "nurse" }, "onboarding summary saved to profile");
   await call("/rest/v1/conversations", { token: tokenOne, method: "POST", body: { id: ids.conversation, user_id: ids.one, title: "Skin Assessment", selected_mode: "nurse", selected_template: "nurse-skin-assessment" } });

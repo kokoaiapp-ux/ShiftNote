@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { getQuickActionsForMode } from "@/lib/product-data";
 import { DASHBOARD_METRICS_CHANGED } from "@/lib/dashboard-metrics";
 import { requireSupabase } from "@/lib/supabase";
+import { DashboardCheckoutReturn } from "@/components/dashboard/DashboardCheckoutReturn";
 
 type DashboardMetrics = { generatedToday: number; generatedYesterday: number; timeSavedMinutes: number; favoriteDocumentation: number; recentActivity: number };
 const emptyMetrics: DashboardMetrics = { generatedToday: 0, generatedYesterday: 0, timeSavedMinutes: 0, favoriteDocumentation: 0, recentActivity: 0 };
@@ -74,6 +75,7 @@ export default function DashboardPage() {
 
   return (
     <>
+      <DashboardCheckoutReturn />
       <section className="relative overflow-hidden rounded-[28px] bg-[var(--primary)] px-7 py-8 text-white shadow-xl md:px-10 md:py-10">
         <div className="absolute -right-16 -top-24 size-72 rounded-full bg-white/10 blur-3xl" />
         <p className="text-sm text-white/70">Good morning, Maria</p>

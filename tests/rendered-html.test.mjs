@@ -286,11 +286,13 @@ test("production authentication and billing redirects use the canonical ShiftNot
   assert.match(origin, /"shiftnote\.care", "www\.shiftnote\.care"/);
   assert.match(origin, /return window\.location\.origin/);
   assert.match(auth, /new URL\("\/auth\/callback", browserAppUrl\(\)\)/);
-  assert.match(auth, /emailRedirectTo: `\$\{browserAppUrl\(\)\}\/auth\/callback/);
+  assert.doesNotMatch(auth, /emailRedirectTo|emailConfirmationRequired/);
   assert.match(auth, /redirectTo: `\$\{browserAppUrl\(\)\}\/auth\/callback/);
   assert.doesNotMatch(auth, /location\.origin/);
   assert.match(billing, /process\.env\.NODE_ENV === "production" \? PRODUCTION_APP_URL/);
   assert.doesNotMatch(billing, /NEXT_PUBLIC_APP_URL/);
+  const checkout = await readFile(new URL("../app/api/billing/checkout/route.ts", import.meta.url), "utf8");
+  assert.match(checkout, /\/dashboard\?checkout=success&session_id=/);
 });
 test("PIP opens at the wider default size", async () => {
   const pip = await readFile(new URL("../hooks/useDocumentPip.ts", import.meta.url), "utf8");
@@ -400,7 +402,8 @@ test("unconfigured authentication supports the temporary preview navigation flow
   ]);
   assert.match(authCard, /if\(!auth\.configured\)\{router\.push\(target\);return;\}/);
   assert.match(authCard, /auth\.signInGoogle\(target\)/);
-  assert.match(authCard, /emailConfirmationRequired/);
+  assert.doesNotMatch(authCard, /emailConfirmationRequired|verification/i);
+  assert.match(authProvider, /if \(!data\.session\) throw new Error/);
   assert.match(authCard, /type="submit"/);
   assert.match(authCard, /type="button"/);
   assert.match(authCard, /\/Mac\/i\.test\(platform\)&&navigator\.maxTouchPoints<2/);
@@ -631,6 +634,23 @@ test("Supabase billing architecture keeps Stripe billing and synchronizes Revenu
   assert.match(pkg, /@supabase\/supabase-js/); assert.doesNotMatch(pkg, /"firebase"/);
 });
 
+test("Supabase confirmation email uses ShiftNote branding without changing auth flow", async () => {
+  const [config, template, auth] = await Promise.all([
+    readFile(new URL("../supabase/config.toml", import.meta.url), "utf8"),
+    readFile(new URL("../supabase/templates/confirmation.html", import.meta.url), "utf8"),
+    readFile(new URL("../components/auth/AuthProvider.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(config, /\[auth\.email\.template\.confirmation\]/);
+  assert.match(config, /subject = "Confirm your ShiftNote account"/);
+  assert.match(config, /content_path = "\.\/supabase\/templates\/confirmation\.html"/);
+  assert.match(config, /# admin_email = "support@shiftnote\.care"/);
+  assert.match(config, /# sender_name = "ShiftNote"/);
+  assert.doesNotMatch(config, /^\[auth\.email\.smtp\]/m);
+  for (const text of ["Welcome to ShiftNote", "Thanks for signing up for ShiftNote.", "Please confirm your email address to activate your account and start creating documentation faster.", "Confirm Email", "If you did not create a ShiftNote account, you can safely ignore this email."]) assert.match(template, new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.match(template, /href="\{\{ \.ConfirmationURL \}\}"/);
+  assert.doesNotMatch(template, /Supabase|Powered by/i);
+  assert.doesNotMatch(auth, /emailRedirectTo|emailConfirmationRequired/);
+});
 test("GA4 is production-only and tracks navigation plus successful product actions", async () => {
   const [analytics, component, layout, auth, product, subscription, discount, billing, env] = await Promise.all([
     readFile(new URL("../lib/analytics.ts", import.meta.url), "utf8"),
