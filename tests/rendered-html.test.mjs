@@ -652,28 +652,40 @@ test("Supabase confirmation email uses ShiftNote branding without changing auth 
   assert.doesNotMatch(auth, /emailRedirectTo|emailConfirmationRequired/);
 });
 test("GA4 is production-only and tracks navigation plus successful product actions", async () => {
-  const [analytics, component, layout, auth, product, subscription, discount, billing, env] = await Promise.all([
+  const [analytics, component, layout, auth, authCard, product, subscription, discount, billing, dashboardReturn, webhook, serverAnalytics, verify, env] = await Promise.all([
     readFile(new URL("../lib/analytics.ts", import.meta.url), "utf8"),
     readFile(new URL("../components/analytics/GoogleAnalytics.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/auth/AuthProvider.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/auth/AuthCard.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/product/ProductProvider.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/subscription/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/discount/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/billing/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../components/dashboard/DashboardCheckoutReturn.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/webhooks/stripe/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/server/google-analytics.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/billing/checkout/verify/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../.env.local.example", import.meta.url), "utf8"),
   ]);
   assert.match(analytics, /process\.env\.NODE_ENV === "production"/);
-  assert.match(analytics, /NEXT_PUBLIC_GA_MEASUREMENT_ID/);
+  assert.match(analytics, /G-GWBM5SN1X2/);
   assert.doesNotMatch(analytics, /API_KEY|SECRET/);
-  assert.match(component, /usePathname/); assert.match(component, /useSearchParams/); assert.match(component, /send_page_view: false/);
+  assert.match(analytics, /sendGAEvent\("event", name, parameters\)/);
+  assert.match(component, /@next\/third-parties\/google/); assert.match(component, /gaId=\{gaMeasurementId\}/);
+  assert.doesNotMatch(component, /googletagmanager|<Script|usePathname|useSearchParams/);
   assert.match(layout, /<GoogleAnalytics \/>/);
   for (const event of ["logout", "onboarding_completed"]) assert.match(auth, new RegExp(`trackEvent\\("${event}"`));
+  assert.match(authCard, /trackEvent\("sign_up"/);
   for (const event of ["ai_documentation_generated", "documentation_saved", "favorite_added", "favorite_removed"]) assert.match(product, new RegExp(event));
   assert.match(subscription, /view_subscription_paywall/); assert.match(subscription, /begin_checkout/);
   assert.match(discount, /view_subscription_paywall/); assert.match(discount, /begin_checkout/);
-  for (const event of ["purchase", "subscription_cancelled", "billing_portal_opened"]) assert.match(billing, new RegExp(event));
-  assert.match(env, /NEXT_PUBLIC_GA_MEASUREMENT_ID=G-/);
+  for (const event of ["purchase", "billing_portal_opened"]) assert.match(billing, new RegExp(event));
+  for (const event of ["trial_started", "subscription_purchased"]) assert.match(dashboardReturn, new RegExp(event));
+  for (const event of ["subscription_renewed", "subscription_cancelled"]) assert.match(webhook, new RegExp(event));
+  assert.match(serverAnalytics, /process\.env\.GA4_API_SECRET/); assert.doesNotMatch(serverAnalytics, /user_id|email|clinical/);
+  assert.match(verify, /no_payment_required/); assert.match(verify, /subscriptionStatus/);
+  assert.match(env, /NEXT_PUBLIC_GA_MEASUREMENT_ID=G-GWBM5SN1X2/); assert.match(env, /GA4_API_SECRET=/);
 });
 
 test("TikTok Pixel and Events API use production gating, server secrets, and Stripe deduplication", async () => {
@@ -699,7 +711,7 @@ test("TikTok Pixel and Events API use production gating, server secrets, and Str
   assert.match(route, /const allowed/); assert.doesNotMatch(route, /CompletePayment/);
   for (const event of ["CompleteRegistration", "Login", "CompleteOnboarding"]) assert.match(auth, new RegExp(event));
   assert.match(subscription, /ViewContent/); assert.match(subscription, /InitiateCheckout/); assert.match(discount, /InitiateCheckout/);
-  assert.match(verify, /payment_status !== "paid"/); assert.match(verify, /stripe-invoice-/);
+  assert.match(verify, /no_payment_required/); assert.match(verify, /paid: session\.payment_status === "paid"/); assert.match(verify, /stripe-invoice-/);
   assert.match(billing, /trackTikTokPixelOnly\("CompletePayment"/); assert.match(billing, /payment\.eventId/);
   assert.match(cancel, /stripe-cancel-/); assert.match(webhook, /SubscriptionRenewal/); assert.match(webhook, /CompletePayment/); assert.match(webhook, /SubscriptionCancellation/);
   assert.match(webhook, /const eventId = `stripe-invoice-\$\{invoice\.id\}`/); assert.match(env, /NEXT_PUBLIC_TIKTOK_PIXEL_ID/); assert.match(env, /TIKTOK_EVENTS_API_TOKEN/);

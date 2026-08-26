@@ -187,8 +187,8 @@ export type Database = {
           answers: Json
           completed_at: string | null
           created_at: string
-          documentation_goal: string | null
           discovery_source: string | null
+          documentation_goal: string | null
           emr_platform: string | null
           id: string
           onboarding_completed: boolean
@@ -205,8 +205,8 @@ export type Database = {
           answers?: Json
           completed_at?: string | null
           created_at?: string
-          documentation_goal?: string | null
           discovery_source?: string | null
+          documentation_goal?: string | null
           emr_platform?: string | null
           id?: string
           onboarding_completed?: boolean
@@ -223,8 +223,8 @@ export type Database = {
           answers?: Json
           completed_at?: string | null
           created_at?: string
-          documentation_goal?: string | null
           discovery_source?: string | null
+          documentation_goal?: string | null
           emr_platform?: string | null
           id?: string
           onboarding_completed?: boolean
@@ -244,6 +244,7 @@ export type Database = {
           auth_user_id: string
           created_at: string
           default_mode: string
+          discovery_source: string | null
           email: string
           emr: string | null
           full_name: string | null
@@ -258,6 +259,7 @@ export type Database = {
           auth_user_id: string
           created_at?: string
           default_mode?: string
+          discovery_source?: string | null
           email: string
           emr?: string | null
           full_name?: string | null
@@ -272,6 +274,7 @@ export type Database = {
           auth_user_id?: string
           created_at?: string
           default_mode?: string
+          discovery_source?: string | null
           email?: string
           emr?: string | null
           full_name?: string | null
@@ -425,33 +428,6 @@ export type Database = {
         }
         Relationships: []
       }
-      subscription_lifecycle: {
-        Row: {
-          created_at: string
-          first_paid_at: string | null
-          has_subscribed_before: boolean
-          paid_history_checked_at: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          first_paid_at?: string | null
-          has_subscribed_before?: boolean
-          paid_history_checked_at?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          first_paid_at?: string | null
-          has_subscribed_before?: boolean
-          paid_history_checked_at?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       subscription_cache: {
         Row: {
           billing_provider: string | null
@@ -477,6 +453,33 @@ export type Database = {
           expiration_date?: string | null
           product_id?: string | null
           subscription_status?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      subscription_lifecycle: {
+        Row: {
+          created_at: string
+          first_paid_at: string | null
+          has_subscribed_before: boolean
+          paid_history_checked_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          first_paid_at?: string | null
+          has_subscribed_before?: boolean
+          paid_history_checked_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          first_paid_at?: string | null
+          has_subscribed_before?: boolean
+          paid_history_checked_at?: string | null
           updated_at?: string
           user_id?: string
         }

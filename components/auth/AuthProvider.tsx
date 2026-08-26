@@ -73,7 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       markOnboardingComplete();
       setAccount((current) => ({
         ...current,
-        profile: current.profile ? { ...current.profile, profession: data.profession, emr: data.emr, place_of_work: data.workplace, workplace: data.workplace, default_mode: selectedMode } : current.profile,
+        profile: current.profile ? { ...current.profile, profession: data.profession, emr: data.emr, place_of_work: data.workplace, workplace: data.workplace, default_mode: selectedMode, discovery_source: data.discovery_source } : current.profile,
         preferences: current.preferences ? { ...current.preferences, default_mode: selectedMode, last_selected_mode: selectedMode, onboarding_completed: true } : current.preferences,
       }));
     },

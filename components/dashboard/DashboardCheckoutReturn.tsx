@@ -22,9 +22,13 @@ export function DashboardCheckoutReturn() {
       .then((token) => fetch(`/api/billing/checkout/verify?session_id=${encodeURIComponent(sessionId)}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       }))
-      .then(async (response) => response.ok ? response.json() as Promise<{ transactionId: string; eventId: string; currency: string; value: number; plan: string }> : null)
+      .then(async (response) => response.ok ? response.json() as Promise<{ transactionId: string; eventId: string; currency: string; value: number; plan: string; paid: boolean; subscriptionStatus: string | null }> : null)
       .then((payment) => {
         if (!active || !payment) return;
+        trackOnce(`subscription:${payment.transactionId}`, payment.subscriptionStatus === "trialing" ? "trial_started" : "subscription_purchased", {
+          transaction_id: payment.transactionId, currency: payment.currency, value: payment.value, plan: payment.plan,
+        });
+        if (!payment.paid) return;
         trackOnce(`purchase:${payment.transactionId}`, "purchase", {
           transaction_id: payment.transactionId, currency: payment.currency, value: payment.value,
           items: [{ item_id: payment.plan, item_name: "ShiftNote Pro" }],

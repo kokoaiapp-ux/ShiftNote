@@ -34,8 +34,17 @@ try {
   const completedOnboarding = await rows(`onboarding_answers?user_id=eq.${ids.one}&select=discovery_source,answers`, tokenOne);
   assert.equal(completedOnboarding[0].discovery_source, "friend", "discovery source saved to onboarding column");
   assert.equal(completedOnboarding[0].answers.discovery_source, "friend", "discovery source retained in onboarding payload");
-  const completedProfile = await rows(`profiles?auth_user_id=eq.${ids.one}&select=profession,emr,place_of_work,default_mode`, tokenOne);
-  assert.deepEqual(completedProfile[0], { profession: "Nurse", emr: "Epic", place_of_work: "Hospital", default_mode: "nurse" }, "onboarding summary saved to profile");
+  const completedProfile = await rows(`profiles?auth_user_id=eq.${ids.one}&select=profession,emr,place_of_work,default_mode,discovery_source`, tokenOne);
+  assert.deepEqual(completedProfile[0], { profession: "Nurse", emr: "Epic", place_of_work: "Hospital", default_mode: "nurse", discovery_source: "friend" }, "onboarding summary and discovery source saved to profile");
+  const discoverySources = ["google_search", "facebook", "instagram", "tiktok", "reddit", "flyer", "friend", "other"];
+  for (const discoverySource of discoverySources) {
+    await call("/rest/v1/rpc/complete_onboarding", { token: tokenOne, method: "POST", body: { payload: { profession: "Nurse", workplace: "Hospital", experience: "5-10 years", emr: "Epic", documentation: "Progress notes", discovery_source: discoverySource, preferred_default_mode: "nurse" } } });
+    const persistedProfile = await rows(`profiles?auth_user_id=eq.${ids.one}&select=discovery_source`, tokenOne);
+    assert.equal(persistedProfile[0].discovery_source, discoverySource, `${discoverySource} saved to live profile`);
+  }
+  const refreshedTokenOne = await session(emailOne);
+  const refreshedProfile = await rows(`profiles?auth_user_id=eq.${ids.one}&select=discovery_source`, refreshedTokenOne);
+  assert.equal(refreshedProfile[0].discovery_source, "other", "discovery source survives a fresh authenticated session");
   await call("/rest/v1/conversations", { token: tokenOne, method: "POST", body: { id: ids.conversation, user_id: ids.one, title: "Skin Assessment", selected_mode: "nurse", selected_template: "nurse-skin-assessment" } });
   await call("/rest/v1/messages", { token: tokenOne, method: "POST", body: [{ id: ids.userMessage, conversation_id: ids.conversation, user_id: ids.one, role: "user", message: "Observed clinical facts" }, { id: ids.assistantMessage, conversation_id: ids.conversation, user_id: ids.one, role: "assistant", message: "Generated clinical documentation" }] });
   await call(`/rest/v1/messages?id=eq.${ids.assistantMessage}`, { token: tokenOne, method: "PATCH", body: { edited_message: "Edited clinical documentation", copied: true } });

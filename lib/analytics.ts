@@ -1,24 +1,19 @@
 "use client";
 
+import { sendGAEvent } from "@next/third-parties/google";
+
 type AnalyticsParameters = Record<string, unknown>;
 
-declare global {
-  interface Window {
-    dataLayer?: unknown[];
-    gtag?: (...args: unknown[]) => void;
-  }
-}
-
-const configuredGaValue = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID?.trim() || "";
-export const gaMeasurementId = configuredGaValue.match(/G-[A-Z0-9]+/i)?.[0] || "";
-export const analyticsEnabled = process.env.NODE_ENV === "production" && Boolean(gaMeasurementId);
+export const gaMeasurementId = "G-GWBM5SN1X2";
+export const analyticsEnabled = process.env.NODE_ENV === "production";
 
 export function trackEvent(name: string, parameters: AnalyticsParameters = {}) {
-  if (!analyticsEnabled || typeof window === "undefined" || typeof window.gtag !== "function") return;
-  window.gtag("event", name, parameters);
+  if (!analyticsEnabled || typeof window === "undefined") return;
+  sendGAEvent("event", name, parameters);
 }
 
 export function trackPageView(path: string) {
+  if (typeof window === "undefined") return;
   trackEvent("page_view", { page_location: `${window.location.origin}${path}`, page_path: path, page_title: document.title });
 }
 

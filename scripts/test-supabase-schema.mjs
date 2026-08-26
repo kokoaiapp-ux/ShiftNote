@@ -4,7 +4,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { pgcrypto } from "@electric-sql/pglite/contrib/pgcrypto";
 
 const db = new PGlite({ extensions: { pgcrypto } });
-const migration = ["202608040001_initial_shift_note.sql", "202608050001_optimize_rls_indexes.sql", "202608050002_profile_onboarding_fields.sql", "202608080001_subscription_access_lifecycle.sql", "202608080002_founder_role.sql", "202608150001_onboarding_discovery_source.sql"].map((name) => readFile(new URL(`../supabase/migrations/${name}`, import.meta.url), "utf8"));
+const migration = ["202608040001_initial_shift_note.sql", "202608050001_optimize_rls_indexes.sql", "202608050002_profile_onboarding_fields.sql", "202608080001_subscription_access_lifecycle.sql", "202608080002_founder_role.sql", "202608150001_onboarding_discovery_source.sql", "202608260001_profile_discovery_source.sql"].map((name) => readFile(new URL(`../supabase/migrations/${name}`, import.meta.url), "utf8"));
 const migrationSql = (await Promise.all(migration)).join("\n");
 const userOne = "11111111-1111-4111-8111-111111111111";
 const userTwo = "22222222-2222-4222-8222-222222222222";
@@ -35,14 +35,24 @@ let denied = false;
 
 await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub', '${userOne}', false);`);
 await db.query("select public.complete_onboarding($1::jsonb)", [JSON.stringify({ profession: "Nurse", workplace: "Hospital", experience: "5-10 years", emr: "Epic", documentation: "Progress notes", discovery_source: "friend", preferred_default_mode: "nurse" })]);
-result = await db.query("select profession,emr,place_of_work,default_mode from public.profiles");
+result = await db.query("select profession,emr,place_of_work,default_mode,discovery_source from public.profiles");
 assert.equal(result.rows.length, 1, "RLS exposes only the signed-in user's profile");
-assert.deepEqual(result.rows[0], { profession: "Nurse", emr: "Epic", place_of_work: "Hospital", default_mode: "nurse" });
+assert.deepEqual(result.rows[0], { profession: "Nurse", emr: "Epic", place_of_work: "Hospital", default_mode: "nurse", discovery_source: "friend" });
+const discoverySources = ["google_search", "facebook", "instagram", "tiktok", "reddit", "flyer", "friend", "other"];
+for (const discoverySource of discoverySources) {
+  await db.query("select public.complete_onboarding($1::jsonb)", [JSON.stringify({ profession: "Nurse", workplace: "Hospital", experience: "5-10 years", emr: "Epic", documentation: "Progress notes", discovery_source: discoverySource, preferred_default_mode: "nurse" })]);
+  result = await db.query("select discovery_source from public.profiles where auth_user_id=$1", [userOne]);
+  assert.deepEqual(result.rows[0], { discovery_source: discoverySource }, `${discoverySource} persists to profile`);
+}
+await db.exec("reset role; reset request.jwt.claim.sub;");
+await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub', '${userOne}', false);`);
+result = await db.query("select discovery_source from public.profiles where auth_user_id=$1", [userOne]);
+assert.deepEqual(result.rows[0], { discovery_source: "other" }, "discovery source survives a simulated logout/login and profile reload");
 denied = false;
 try { await db.query("update public.profiles set role='founder' where auth_user_id=$1", [userOne]); } catch { denied = true; }
 assert.equal(denied, true, "authenticated users cannot promote their own profile role");
 result = await db.query("select onboarding_completed,emr_platform,discovery_source,answers ->> 'discovery_source' as answer_discovery_source from public.onboarding_answers");
-assert.deepEqual(result.rows[0], { onboarding_completed: true, emr_platform: "Epic", discovery_source: "friend", answer_discovery_source: "friend" });
+assert.deepEqual(result.rows[0], { onboarding_completed: true, emr_platform: "Epic", discovery_source: "other", answer_discovery_source: "other" });
 await db.query("insert into public.conversations (id,user_id,title,selected_mode,selected_template) values ($1,$2,$3,$4,$5)", [conversation, userOne, "Skin Assessment", "nurse", "nurse-skin-assessment"]);
 await db.query("insert into public.messages (id,conversation_id,user_id,role,message) values ($1,$2,$3,'assistant',$4)", [message, conversation, userOne, "Clinical documentation"]);
 await db.query("update public.messages set edited_message=$1 where id=$2", ["Edited clinical documentation", message]);
