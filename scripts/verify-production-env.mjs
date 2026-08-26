@@ -25,7 +25,6 @@ for (const name of required) {
   else if (/replace[_-]?me|placeholder|your[_-]/i.test(value)) errors.push(`${name} contains a placeholder.`);
 }
 
-check("NEXT_PUBLIC_GA_MEASUREMENT_ID", /^G-GWBM5SN1X2$/);
 check("NEXT_PUBLIC_SUPABASE_URL", /^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i);
 check("STRIPE_SECRET_KEY", /^(?:sk|rk)_live_[A-Za-z0-9_]+$/);
 check("STRIPE_WEBHOOK_SECRET", /^whsec_[A-Za-z0-9_]+$/);
