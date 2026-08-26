@@ -669,11 +669,11 @@ test("GA4 is production-only and tracks navigation plus successful product actio
     readFile(new URL("../.env.local.example", import.meta.url), "utf8"),
   ]);
   assert.match(analytics, /process\.env\.NODE_ENV === "production"/);
-  assert.match(analytics, /G-GWBM5SN1X2/);
+  assert.match(analytics, /NEXT_PUBLIC_GA_MEASUREMENT_ID/);
   assert.doesNotMatch(analytics, /API_KEY|SECRET/);
-  assert.match(analytics, /sendGAEvent\("event", name, parameters\)/);
-  assert.match(component, /@next\/third-parties\/google/); assert.match(component, /gaId=\{gaMeasurementId\}/);
-  assert.doesNotMatch(component, /googletagmanager|<Script|usePathname|useSearchParams/);
+  assert.match(analytics, /browserGtag\(\)\?\.\("event", name, parameters\)/);
+  assert.match(component, /googletagmanager\.com\/gtag/); assert.match(component, /usePathname|useSearchParams/);
+  assert.match(component, /send_page_view:false/); assert.doesNotMatch(component, /@next\/third-parties|third-party-capital/);
   assert.match(layout, /<GoogleAnalytics \/>/);
   for (const event of ["logout", "onboarding_completed"]) assert.match(auth, new RegExp(`trackEvent\\("${event}"`));
   assert.match(authCard, /trackEvent\("sign_up"/);
@@ -683,7 +683,7 @@ test("GA4 is production-only and tracks navigation plus successful product actio
   for (const event of ["purchase", "billing_portal_opened"]) assert.match(billing, new RegExp(event));
   for (const event of ["trial_started", "subscription_purchased"]) assert.match(dashboardReturn, new RegExp(event));
   for (const event of ["subscription_renewed", "subscription_cancelled"]) assert.match(webhook, new RegExp(event));
-  assert.match(serverAnalytics, /process\.env\.GA4_API_SECRET/); assert.doesNotMatch(serverAnalytics, /user_id|email|clinical/);
+  assert.match(serverAnalytics, /process\.env\.GA4_API_SECRET/); assert.match(serverAnalytics, /catch \{ \/\* Analytics delivery must never affect/); assert.doesNotMatch(serverAnalytics, /user_id|email|clinical|throw new Error/);
   assert.match(verify, /no_payment_required/); assert.match(verify, /subscriptionStatus/);
   assert.match(env, /NEXT_PUBLIC_GA_MEASUREMENT_ID=G-GWBM5SN1X2/); assert.match(env, /GA4_API_SECRET=/);
 });

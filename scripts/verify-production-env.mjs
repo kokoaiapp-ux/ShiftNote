@@ -5,7 +5,6 @@ const envFile = ".env.local";
 if (existsSync(envFile)) loadEnvFile(envFile);
 
 const required = [
-  "NEXT_PUBLIC_GA_MEASUREMENT_ID",
   "NEXT_PUBLIC_TIKTOK_PIXEL_ID", "TIKTOK_EVENTS_API_TOKEN",
   "NEXT_PUBLIC_META_PIXEL_ID", "META_CONVERSIONS_API_TOKEN",
   "OPENAI_API_KEY", "OPENAI_MODEL",
@@ -26,6 +25,7 @@ for (const name of required) {
   else if (/replace[_-]?me|placeholder|your[_-]/i.test(value)) errors.push(`${name} contains a placeholder.`);
 }
 
+check("NEXT_PUBLIC_GA_MEASUREMENT_ID", /^G-GWBM5SN1X2$/);
 check("NEXT_PUBLIC_SUPABASE_URL", /^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i);
 check("STRIPE_SECRET_KEY", /^(?:sk|rk)_live_[A-Za-z0-9_]+$/);
 check("STRIPE_WEBHOOK_SECRET", /^whsec_[A-Za-z0-9_]+$/);
