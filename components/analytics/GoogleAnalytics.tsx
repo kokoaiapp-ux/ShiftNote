@@ -2,17 +2,21 @@
 
 import Script from "next/script";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { analyticsEnabled, gaMeasurementId, trackPageView } from "@/lib/analytics";
 
 export function GoogleAnalytics() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const lastPageView = useRef<string | null>(null);
 
   useEffect(() => {
     if (!analyticsEnabled) return;
     const query = searchParams.toString();
-    trackPageView(query ? `${pathname}?${query}` : pathname);
+    const path = query ? `${pathname}?${query}` : pathname;
+    if (lastPageView.current === path) return;
+    lastPageView.current = path;
+    trackPageView(path);
   }, [pathname, searchParams]);
 
   if (!analyticsEnabled) return null;

@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Apple, Globe2, Sparkles } from "lucide-react";
 import { useAuth, friendlyAuthError } from "./AuthProvider";
 import { StatusMessage } from "@/components/ui/status-message";
-import { setPendingAuthEvent, trackEvent } from "@/lib/analytics";
+import { setPendingAuthEvent, trackEvent, trackOnce } from "@/lib/analytics";
 
 const field = "mt-1.5 h-12 w-full rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15";
 
@@ -18,7 +18,7 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
   useEffect(()=>{const platform=(navigator as Navigator & {userAgentData?:{platform?:string}}).userAgentData?.platform||navigator.platform||navigator.userAgent;queueMicrotask(()=>setShowApple(/Mac/i.test(platform)&&navigator.maxTouchPoints<2));},[]);
   useEffect(()=>{if(mode==="signup"&&auth.user)router.replace(target);},[auth.user,mode,router,target]);
 
-  async function submit(event:FormEvent){event.preventDefault();if(auth.configured&&mode==="signup"&&password.length<8){setMessage({type:"error",text:"Use a password with at least 8 characters."});return;}setBusy(true);setMessage(null);try{if(!auth.configured){router.push(target);return;}if(mode==="signup"){await auth.signUpEmail(name.trim(),email.trim(),password);trackEvent("sign_up",{method:"email"});router.push(target);}else{await auth.signInEmail(email.trim(),password);trackEvent("login",{method:"email"});router.push(target);}}catch(error){setMessage({type:"error",text:friendlyAuthError(error)});}finally{setBusy(false)}}
+  async function submit(event:FormEvent){event.preventDefault();if(auth.configured&&mode==="signup"&&password.length<8){setMessage({type:"error",text:"Use a password with at least 8 characters."});return;}setBusy(true);setMessage(null);try{if(!auth.configured){router.push(target);return;}if(mode==="signup"){await auth.signUpEmail(name.trim(),email.trim(),password);trackOnce(`sign-up:${email.trim().toLowerCase()}`,"sign_up",{method:"email",user_role:"user"});router.push(target);}else{await auth.signInEmail(email.trim(),password);trackEvent("login",{method:"email"});router.push(target);}}catch(error){setMessage({type:"error",text:friendlyAuthError(error)});}finally{setBusy(false)}}
   async function oauth(provider:"google"|"apple"){setBusy(true);setMessage(null);try{setPendingAuthEvent(mode==="signup"?"sign_up":"login",provider);await(provider==="google"?auth.signInGoogle(target):auth.signInApple(target));}catch(error){setMessage({type:"error",text:friendlyAuthError(error)});setBusy(false)}}
   async function reset(){if(!auth.configured)return;if(!email.trim()){setMessage({type:"error",text:"Enter your email address first."});return;}setBusy(true);try{await auth.resetPassword(email.trim());setMessage({type:"success",text:"Password reset instructions were sent if an account exists for that email."});}catch(error){setMessage({type:"error",text:friendlyAuthError(error)});}finally{setBusy(false)}}
 

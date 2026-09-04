@@ -1,6 +1,6 @@
 # Stripe production setup
 
-ShiftNote uses Supabase Auth for identity, Stripe Checkout and Customer Portal for billing, and RevenueCat for entitlement synchronization.
+ShiftNote uses Supabase Auth for identity and Stripe Checkout, webhooks, Customer Portal, and Supabase subscription records for billing and entitlement synchronization.
 
 ## Environment variables
 

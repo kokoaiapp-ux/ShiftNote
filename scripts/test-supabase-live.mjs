@@ -58,17 +58,12 @@ try {
   assert.equal((await rows(`conversations?id=eq.${ids.conversation}`, tokenTwo)).length, 0, "cross-user reads hidden by RLS");
   const deniedInsert = await call("/rest/v1/conversations", { token: tokenTwo, method: "POST", body: { user_id: ids.one, title: "Denied", selected_mode: "nurse", selected_template: "custom-template" }, expected: [401, 403] });
   assert.ok([401, 403].includes(deniedInsert.status), "cross-user insert denied");
-  await call("/rest/v1/subscription_cache", { key: service, token: service, method: "POST", body: { user_id: ids.one, entitlement: "pro", subscription_status: "active" } });
-  assert.equal((await rows(`subscription_cache?user_id=eq.${ids.one}`, tokenOne)).length, 1, "owner can read cache");
-  await call(`/rest/v1/subscription_cache?user_id=eq.${ids.one}`, { token: tokenOne, method: "PATCH", body: { subscription_status: "expired" }, expected: [200, 204, 401, 403] });
-  const authoritativeCache = await rows(`subscription_cache?user_id=eq.${ids.one}`, service, service);
-  assert.equal(authoritativeCache[0].subscription_status, "active", "client cache mutation has no effect");
   await call(`/auth/v1/admin/users/${ids.one}`, { key: service, token: service, method: "DELETE" });
   createdUsers.splice(createdUsers.indexOf(ids.one), 1);
-  for (const [table, column] of [["profiles", "auth_user_id"], ["onboarding_answers", "user_id"], ["conversations", "user_id"], ["messages", "user_id"], ["favorites", "user_id"], ["custom_templates", "user_id"], ["user_preferences", "user_id"], ["subscription_cache", "user_id"]]) {
+  for (const [table, column] of [["profiles", "auth_user_id"], ["onboarding_answers", "user_id"], ["conversations", "user_id"], ["messages", "user_id"], ["favorites", "user_id"], ["custom_templates", "user_id"], ["user_preferences", "user_id"]]) {
     assert.equal((await rows(`${table}?${column}=eq.${ids.one}`, service, service)).length, 0, `${table} cascade deletion`);
   }
-  console.log("Live Supabase triggers, CRUD, search, RLS isolation, cache protection, and cascades passed.");
+  console.log("Live Supabase triggers, CRUD, search, RLS isolation, and cascades passed.");
 } finally {
   for (const id of createdUsers) await call(`/auth/v1/admin/users/${id}`, { key: service, token: service, method: "DELETE", expected: [200, 204, 404] }).catch(() => undefined);
 }

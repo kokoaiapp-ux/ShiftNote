@@ -7,7 +7,7 @@ import { browserAppUrl } from "@/lib/app-url";
 import { modes } from "@/lib/product-data";
 import { getSupabase, requireSupabase, supabaseConfigured } from "@/lib/supabase";
 import type { Json, Tables } from "@/types/database";
-import { consumePendingAuthEvent, trackEvent } from "@/lib/analytics";
+import { consumePendingAuthEvent, trackEvent, trackOnce } from "@/lib/analytics";
 import { consumePendingTikTokAuthEvent, setPendingTikTokAuthEvent, trackTikTok } from "@/lib/tiktok";
 import { consumePendingMetaAuthEvent, setPendingMetaAuthEvent, trackMeta } from "@/lib/meta";
 
@@ -66,7 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const payload = { ...data, preferred_default_mode: selectedMode, default_mode: selectedMode } as unknown as Json;
       const { error } = await requireSupabase().rpc("complete_onboarding", { payload });
       if (error) throw error;
-      trackEvent("onboarding_completed", { discovery_source: data.discovery_source });
+      trackOnce(`onboarding:${user?.id || "unknown"}`, "onboarding_completed", { discovery_source: data.discovery_source, user_role: account.profile?.role || "user" });
       trackTikTok("CompleteOnboarding", { discovery_source: data.discovery_source });
       trackMeta("CompleteOnboarding", { discovery_source: data.discovery_source });
       localStorage.setItem("shiftnote-onboarding-draft", JSON.stringify(data));

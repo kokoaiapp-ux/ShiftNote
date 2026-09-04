@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { getStripe, requireApiUser } from "@/lib/server/billing";
-import { deleteRevenueCatSubscriber, revenueCatConfigured } from "@/lib/server/revenuecat";
 const renewableStatuses = new Set(["active", "trialing", "past_due", "unpaid", "paused"]);
 export async function DELETE(request: Request) {
   try {
@@ -15,7 +14,6 @@ export async function DELETE(request: Request) {
       const subscription = await stripe.subscriptions.retrieve(id);
       if (renewableStatuses.has(subscription.status)) await stripe.subscriptions.update(id, { cancel_at_period_end: true, metadata: { ...subscription.metadata, supabase_user_id: "" } });
     }
-    if (revenueCatConfigured()) await deleteRevenueCatSubscriber(user.id);
     const { error } = await admin.auth.admin.deleteUser(user.id, false);
     if (error) throw error;
     return NextResponse.json({ ok: true, renewalCanceled: subscriptionIds.size > 0 });

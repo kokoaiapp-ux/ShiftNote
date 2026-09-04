@@ -287,27 +287,6 @@ export type Database = {
         }
         Relationships: []
       }
-      revenuecat_webhook_events: {
-        Row: {
-          environment: string | null
-          event_type: string
-          id: string
-          processed_at: string
-        }
-        Insert: {
-          environment?: string | null
-          event_type: string
-          id: string
-          processed_at?: string
-        }
-        Update: {
-          environment?: string | null
-          event_type?: string
-          id?: string
-          processed_at?: string
-        }
-        Relationships: []
-      }
       stripe_customers: {
         Row: {
           created_at: string
@@ -425,36 +404,6 @@ export type Database = {
           id?: string
           livemode?: boolean
           processed_at?: string
-        }
-        Relationships: []
-      }
-      subscription_cache: {
-        Row: {
-          billing_provider: string | null
-          entitlement: string | null
-          expiration_date: string | null
-          product_id: string | null
-          subscription_status: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          billing_provider?: string | null
-          entitlement?: string | null
-          expiration_date?: string | null
-          product_id?: string | null
-          subscription_status?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          billing_provider?: string | null
-          entitlement?: string | null
-          expiration_date?: string | null
-          product_id?: string | null
-          subscription_status?: string | null
-          updated_at?: string
-          user_id?: string
         }
         Relationships: []
       }

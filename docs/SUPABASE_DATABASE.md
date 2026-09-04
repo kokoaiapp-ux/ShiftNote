@@ -1,6 +1,6 @@
 # Supabase database workflow
 
-This phase configures Supabase Postgres only. It does not configure Stripe, RevenueCat, or Firebase data migration.
+This phase configures Supabase Postgres only. It does not configure Stripe billing or Firebase data migration.
 
 ## Local migration credentials
 

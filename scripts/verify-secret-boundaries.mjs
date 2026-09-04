@@ -11,19 +11,13 @@ const secretEnvironmentNames = [
   "STRIPE_SECRET_KEY",
   "STRIPE_WEBHOOK_SECRET",
   "SUPABASE_SERVICE_ROLE_KEY",
-  "REVENUECAT_STRIPE_APP_PUBLIC_API_KEY",
-  "REVENUECAT_SECRET_API_KEY",
-  "REVENUECAT_WEBHOOK_AUTH",
-  "REVENUECAT_WEBHOOK_SIGNING_SECRET",
   "SUPABASE_ACCESS_TOKEN",
   "SUPABASE_DB_PASSWORD",
   "TIKTOK_EVENTS_API_TOKEN",
   "TIKTOK_TEST_EVENT_CODE",
   "META_CONVERSIONS_API_TOKEN",
 ];
-const secretValueEnvironmentNames = secretEnvironmentNames.filter(
-  (name) => name !== "REVENUECAT_STRIPE_APP_PUBLIC_API_KEY",
-);
+const secretValueEnvironmentNames = secretEnvironmentNames;
 const serverRequestMarkers = ["api.openai.com", "@ai-sdk/openai"];
 const credentialPatterns = [
   ["OpenAI API key", /\bsk-(?:proj-)?[A-Za-z0-9_-]{20,}\b/g],
@@ -44,7 +38,7 @@ for (const sourceRoot of sourceRoots) {
     const isClientModule = /^\s*["']use client["'];/m.test(content);
     const usedSecrets = secretEnvironmentNames.filter((name) => content.includes(name));
 
-    if (/NEXT_PUBLIC_(?:OPENAI|STRIPE_SECRET|SUPABASE_SERVICE_ROLE|REVENUECAT_SECRET|TIKTOK_EVENTS_API_TOKEN|META_CONVERSIONS_API_TOKEN|[^\s]*WEBHOOK)/.test(content)) {
+    if (/NEXT_PUBLIC_(?:OPENAI|STRIPE_SECRET|SUPABASE_SERVICE_ROLE|TIKTOK_EVENTS_API_TOKEN|META_CONVERSIONS_API_TOKEN|[^\s]*WEBHOOK)/.test(content)) {
       errors.push(`${projectPath}: a secret uses the public client prefix.`);
     }
     if ((isClientModule || !isServerBoundary) && (usedSecrets.length || serverRequestMarkers.some((marker) => content.includes(marker)))) {

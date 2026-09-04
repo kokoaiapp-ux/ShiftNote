@@ -70,7 +70,7 @@ export function SubscriptionAccessProvider({ children }: { children: React.React
     if (!userId) return;
     const client = requireSupabase();
     const channel = client.channel(`subscription-access-${userId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "subscription_cache", filter: `user_id=eq.${userId}` }, () => void refresh())
+      .on("postgres_changes", { event: "*", schema: "public", table: "stripe_subscriptions", filter: `user_id=eq.${userId}` }, () => void refresh())
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles", filter: `auth_user_id=eq.${userId}` }, () => void refresh())
       .subscribe();
     return () => { void client.removeChannel(channel); };

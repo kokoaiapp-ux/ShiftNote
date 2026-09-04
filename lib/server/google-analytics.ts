@@ -1,7 +1,7 @@
 import "server-only";
 
 type ServerAnalyticsEvent = {
-  name: "subscription_renewed" | "subscription_cancelled";
+  name: "trial_started" | "subscription_purchased" | "subscription_renewed" | "subscription_cancelled";
   eventId: string;
   parameters?: Record<string, string | number | boolean>;
 };

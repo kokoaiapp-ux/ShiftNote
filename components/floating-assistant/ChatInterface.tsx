@@ -18,6 +18,7 @@ type Props = {
   onSend: (text: string, files?: FileList) => void;
   onClose?: () => void;
   floating: boolean;
+  workspace?: boolean;
 };
 
 const MAX_RECORDING_SECONDS = 150;
@@ -31,7 +32,7 @@ export function messageText(message?: UIMessage) {
     .join("");
 }
 
-export function ChatInterface({ messages, status, error, onSend, onClose, floating }: Props) {
+export function ChatInterface({ messages, status, error, onSend, onClose, floating, workspace = false }: Props) {
   const product = useProduct();
   const [input, setInput] = useState("");
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
@@ -244,7 +245,7 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
         ? "relative flex h-full min-h-0 flex-col overflow-hidden bg-[var(--background)] text-[var(--foreground)]"
         : "relative flex h-[min(700px,calc(100vh-100px))] w-[min(410px,calc(100vw-24px))] flex-col overflow-hidden rounded-[26px] border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] shadow-[0_28px_80px_rgba(0,0,0,0.22)]"}
     >
-      <header className="border-b border-[var(--border)] bg-[var(--card)] px-4 py-3.5">
+      {!workspace && <header className="border-b border-[var(--border)] bg-[var(--card)] px-4 py-3.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="relative grid size-10 place-items-center rounded-xl bg-[var(--primary)] font-semibold text-white">
@@ -261,7 +262,7 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
           <span className="text-[var(--muted-foreground)]">Current template</span>
           <span className="truncate font-semibold">{product.template.name}</span>
         </div>
-      </header>
+      </header>}
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5" ref={scrollRef}>
         {messages.length === 0 ? (

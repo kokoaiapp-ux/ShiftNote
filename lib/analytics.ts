@@ -29,8 +29,8 @@ export function trackOnce(key: string, name: string, parameters: AnalyticsParame
   if (!analyticsEnabled || typeof window === "undefined") return;
   try {
     const storageKey = `shiftnote-ga:${key}`;
-    if (window.sessionStorage.getItem(storageKey)) return;
-    window.sessionStorage.setItem(storageKey, "1");
+    if (window.localStorage.getItem(storageKey)) return;
+    window.localStorage.setItem(storageKey, "1");
     trackEvent(name, parameters);
   } catch { /* Analytics must never affect the application. */ }
 }
@@ -48,6 +48,6 @@ export function consumePendingAuthEvent() {
     if (!value) return;
     window.sessionStorage.removeItem(key);
     const pending = JSON.parse(value) as { event?: "login" | "sign_up"; method?: string };
-    if (pending.event) trackEvent(pending.event, { method: pending.method || "oauth" });
+    if (pending.event) trackEvent(pending.event, { method: pending.method || "oauth", user_role: "user" });
   } catch { /* Ignore unavailable storage or malformed browser state. */ }
 }

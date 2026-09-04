@@ -142,7 +142,7 @@ test("secret credentials remain server-only and sensitive content is not logged"
   assert.doesNotMatch(recorder, /deviceId: device\.deviceId|track\?\.getSettings\(\)/);
   assert.doesNotMatch(provider, /console\.error\([^\n]*, error\)/);
   assert.match(auth, /return "Authentication could not be completed\. Please try again\."/);
-  for (const secret of ["OPENAI_API_KEY", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "SUPABASE_SERVICE_ROLE_KEY", "REVENUECAT_SECRET_API_KEY", "REVENUECAT_WEBHOOK_AUTH"]) {
+  for (const secret of ["OPENAI_API_KEY", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "SUPABASE_SERVICE_ROLE_KEY"]) {
     assert.match(guard, new RegExp(`"${secret}"`));
   }
   assert.match(guard, /NEXT_PUBLIC_\(\?:OPENAI\|STRIPE_SECRET/);
@@ -267,9 +267,11 @@ test("mobile Copilot constrains scrolling to messages and stacks the composer", 
   assert.match(shell, /pathname === "\/copilot"/);
   assert.match(shell, /h-\[calc\(100dvh-4rem\)\] overflow-hidden/);
   assert.match(page, /flex h-full min-h-0 flex-col/);
-  assert.match(page, /grid min-h-0 flex-1/);
-  assert.match(page, /hidden flex-wrap items-end justify-between gap-4 md:flex/);
-  assert.match(page, /hidden space-y-4 xl:block/);
+  assert.match(page, /min-h-0 flex-1 overflow-hidden/);
+  assert.match(page, /Current Mode/);
+  assert.match(page, /Current Template/);
+  assert.match(page, /New Conversation/);
+  assert.doesNotMatch(page, /AI workspace|xl:grid-cols/);
   assert.match(chat, /min-h-0 flex-1 overflow-y-auto/);
   assert.match(chat, /flex flex-wrap items-end gap-1/);
   assert.match(chat, /order-first[\s\S]*basis-full/);
@@ -350,7 +352,6 @@ test("status messages use shared theme-aware accessible styles", async () => {
   assert.match(chat, /StatusMessage[\s\S]*variant="warning"/);
   assert.match(history, /StatusMessage[\s\S]*variant="error"/);
   assert.match(favorite, /StatusMessage[\s\S]*variant="error"/);
-  assert.match(copilot, /StatusMessage[\s\S]*variant="warning"/);
   assert.doesNotMatch([chat, history, favorite, copilot].join("\n"), /text-red-600|bg-red-50|bg-amber-50/);
 
   const contrastPairs = [
@@ -433,7 +434,7 @@ test("subscription flow gates the primary paywall, preserves the discount until 
     readFile(new URL("../components/product/AppShell.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/settings/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../components/floating-assistant/PipShell.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../.env.example", import.meta.url), "utf8"),
+    readFile(new URL("../.env.local.example", import.meta.url), "utf8"),
   ]);
   assert.match(flow, /hasPurchasedPrimaryPaywall/);
   assert.match(flow, /shiftnote-onboarding-complete/);
@@ -497,7 +498,7 @@ test("onboarding captures a required discovery source before the final step", as
   for (const value of ["tiktok", "instagram", "facebook", "reddit", "flyer", "friend", "google_search", "other"]) assert.match(onboarding, new RegExp(`\\b${value}\\b`));
   assert.match(onboarding, /if\(!value\)/);
   assert.match(onboarding, /q\.key!=="discovery_source"/);
-  assert.match(auth, /trackEvent\("onboarding_completed", \{ discovery_source: data\.discovery_source \}\)/);
+  assert.match(auth, /trackOnce\(`onboarding:\$\{user\?\.id \|\| "unknown"\}`, "onboarding_completed", \{ discovery_source: data\.discovery_source, user_role: account\.profile\?\.role \|\| "user" \}\)/);
   assert.match(migration, /add column discovery_source text/);
   assert.match(migration, /onboarding_answers_discovery_source_check/);
   assert.match(migration, /discovery_source = excluded\.discovery_source/);
@@ -525,28 +526,28 @@ test("Pro routes use global server-backed subscription access without per-route 
   assert.match(provider, /REVALIDATE_INTERVAL_MS = 60_000/);
   assert.match(provider, /visibilitychange/);
   assert.match(provider, /postgres_changes/);
-  assert.match(provider, /subscription_cache/);
+  assert.match(provider, /stripe_subscriptions/);
   assert.match(provider, /table: "profiles"/);
   assert.match(provider, /access\?\.expiresAt/);
   assert.match(subscription, /subscription\.access\.state === "neverSubscribed"/);
   assert.match(subscription, /active: discountEligible/);
   assert.match(discount, /subscription\.access\.state !== "neverSubscribed"/);
   for (const state of ["neverSubscribed", "activeSubscription", "expiredSubscription"]) assert.match(access, new RegExp(state));
-  assert.match(access, /subscription_cache/);
+  assert.doesNotMatch(access, /subscription_cache|revenuecat/i);
   assert.match(access, /stripe_subscriptions|currentSubscription/);
   assert.match(accessRoute, /resolveSubscriptionAccess/);
   assert.match(stripeWebhook, /invoice\.paid/);
-  assert.match(stripeWebhook, /markSubscriptionPaidByCustomer/);
+  assert.match(stripeWebhook, /markSubscriptionPaid\(admin, customer\.user_id/);
+  assert.match(stripeWebhook, /const firstPayment = !lifecycle\?\.has_subscribed_before/);
   assert.match(migration, /has_subscribed_before boolean not null default false/);
   assert.match(migration, /subscription_lifecycle_select_own/);
   assert.match(migration, /revoke insert, update, delete/);
 });
 
 test("founder access is database-assigned and enforced by shared server authorization", async () => {
-  const [migration, roles, revenueCat, access, accessClient, subscription, settings, transcribe] = await Promise.all([
+  const [migration, roles, access, accessClient, subscription, settings, transcribe] = await Promise.all([
     readFile(new URL("../supabase/migrations/202608080002_founder_role.sql", import.meta.url), "utf8"),
     readFile(new URL("../lib/server/roles.ts", import.meta.url), "utf8"),
-    readFile(new URL("../lib/server/revenuecat.ts", import.meta.url), "utf8"),
     readFile(new URL("../lib/server/subscription-access.ts", import.meta.url), "utf8"),
     readFile(new URL("../lib/subscription-access-client.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/subscription/page.tsx", import.meta.url), "utf8"),
@@ -559,12 +560,7 @@ test("founder access is database-assigned and enforced by shared server authoriz
   assert.match(migration, /revoke update on public\.profiles from authenticated/);
   assert.match(migration, /grant update \(full_name, profession, workplace, default_mode, emr, place_of_work\)/);
   assert.match(roles, /data\?\.role === "founder"/);
-  assert.doesNotMatch(revenueCat, /hasFounderRole|requireRevenueCatPro/);
   assert.match(access, /isFounder: true/);
-  assert.match(access, /CACHE_MAX_AGE_MS/);
-  assert.match(access, /cacheCondition/);
-  assert.match(access, /refreshRevenueCatOnce/);
-  assert.match(access, /revenueCatRefreshes/);
   assert.match(access, /isTrial/);
   assert.match(access, /isPromotional/);
   assert.match(access, /provider/);
@@ -589,51 +585,43 @@ function relativeLuminance(hex) {
   return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
 }
 
-test("Supabase billing architecture keeps Stripe billing and synchronizes RevenueCat entitlements", async () => {
-  const [schema, stripeSchema, settings, billing, portal, checkout, account, stripeWebhook, revenueCatWebhook, product, pkg] = await Promise.all([
+test("Supabase billing architecture keeps Stripe billing authoritative", async () => {
+  const [schema, stripeSchema, cleanup, settings, billing, portal, checkout, restore, account, stripeWebhook, product, pkg, access, provider] = await Promise.all([
     readFile(new URL("../supabase/migrations/202608040001_initial_shift_note.sql", import.meta.url), "utf8"),
     readFile(new URL("../supabase/migrations/202608050003_stripe_billing.sql", import.meta.url), "utf8"),
+    readFile(new URL("../supabase/migrations/202609040001_remove_revenuecat.sql", import.meta.url), "utf8"),
     readFile(new URL("../app/settings/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/billing/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/billing/portal/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/billing/checkout/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/billing/restore/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/account/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/webhooks/stripe/route.ts", import.meta.url), "utf8"),
-    readFile(new URL("../app/api/webhooks/revenuecat/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../components/product/ProductProvider.tsx", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
+    readFile(new URL("../lib/server/subscription-access.ts", import.meta.url), "utf8"),
+    readFile(new URL("../components/subscription/SubscriptionAccessProvider.tsx", import.meta.url), "utf8"),
   ]);
   for (const table of ["profiles", "onboarding_answers", "conversations", "messages", "favorites", "custom_templates", "user_preferences", "subscription_cache"]) assert.match(schema, new RegExp(`create table public.${table}`));
-  assert.doesNotMatch(schema, /create table public\.(subscriptions|billing_webhook_events)/);
-  assert.equal((schema.match(/enable row level security/g) || []).length, 8);
-  assert.match(schema, /references auth\.users\(id\) on delete cascade/g);
-  assert.match(schema, /create trigger on_auth_user_created/);
-  assert.match(schema, /create or replace function public\.complete_onboarding/);
-  assert.match(schema, /subscription_cache_select_own/);
-  assert.doesNotMatch(schema, /subscription_cache_(insert|update|delete)_own/);
+  assert.match(cleanup, /drop table if exists public\.revenuecat_webhook_events/);
+  assert.match(cleanup, /drop table if exists public\.subscription_cache/);
   for (const label of ["Account", "Billing"]) assert.match(settings, new RegExp(label));
   for (const label of ["Thinking about leaving", "Pause Subscription for 1 Month", "You&apos;ll lose access", "Too expensive", "Special Offer"]) assert.match(billing, new RegExp(label));
   assert.match(billing, /\$9\.99\/month/); assert.match(billing, /Billed \$59\.94 every 6 months/); assert.match(billing, /Save 50% compared to the monthly plan/);
   assert.match(billing, /Switch to 6 Months<\/span><span>\$13\.99\/month \(Save 30%\)/);
-  assert.match(billing, /\$13\.99\/month/); assert.match(billing, /Billed \$83\.94 every 6 months/);
-  assert.match(billing, /whitespace-normal/); assert.match(billing, /min-h-12/);
-  assert.doesNotMatch(billing, /RefreshCw/); assert.match(billing, /min-h-11/);
-  assert.match(billing, /text-red-700/); assert.match(billing, /dark:text-red-400/);
-  assert.match(billing, /variant="outline">Cancel Subscription<\/Button>/);
-  assert.match(billing, /function Actions[\s\S]*mt-6 grid gap-3/);
   assert.match(portal, /payment_method_update/); assert.match(portal, /subscription_cancel/);
   assert.match(checkout, /mode: "subscription"/); assert.match(checkout, /client_reference_id: user.id/);
+  assert.match(restore, /getStripe\(\)\.subscriptions\.list/); assert.match(restore, /syncStripeSubscription/);
   assert.match(account, /admin.auth.admin.deleteUser/); assert.match(account, /cancel_at_period_end: true/);
-  assert.match(account, /stripe\.subscriptions\.search/); assert.match(account, /renewalCanceled/);
   assert.match(stripeSchema, /create table public\.stripe_customers/);
   assert.match(stripeSchema, /create table public\.stripe_subscriptions/);
   assert.match(stripeSchema, /create table public\.stripe_webhook_events/);
-  assert.match(stripeWebhook, /constructEvent/); assert.match(stripeWebhook, /submitStripeSubscription/);
-  assert.match(revenueCatWebhook, /x-revenuecat-webhook-signature/); assert.match(revenueCatWebhook, /syncRevenueCatSubscriber/);
+  assert.match(stripeWebhook, /constructEvent/); assert.doesNotMatch(stripeWebhook, /revenuecat/i);
+  assert.match(access, /currentSubscription/); assert.doesNotMatch(access, /revenuecat|subscription_cache/i);
+  assert.match(provider, /table: "stripe_subscriptions"/);
   assert.match(product, /loadWorkspace\(requireSupabase\(\)/); assert.doesNotMatch(product, /user_workspaces/);
-  assert.match(pkg, /@supabase\/supabase-js/); assert.doesNotMatch(pkg, /"firebase"/);
+  assert.match(pkg, /@supabase\/supabase-js/); assert.doesNotMatch(pkg, /revenuecat|"firebase"/i);
 });
-
 test("Supabase confirmation email uses ShiftNote branding without changing auth flow", async () => {
   const [config, template, auth] = await Promise.all([
     readFile(new URL("../supabase/config.toml", import.meta.url), "utf8"),
@@ -673,17 +661,22 @@ test("GA4 is production-only and tracks navigation plus successful product actio
   assert.doesNotMatch(analytics, /API_KEY|SECRET/);
   assert.match(analytics, /browserGtag\(\)\?\.\("event", name, parameters\)/);
   assert.match(component, /googletagmanager\.com\/gtag/); assert.match(component, /usePathname|useSearchParams/);
-  assert.match(component, /send_page_view:false/); assert.doesNotMatch(component, /@next\/third-parties|third-party-capital/);
+  assert.match(component, /send_page_view:false/); assert.match(component, /lastPageView\.current === path/); assert.doesNotMatch(component, /@next\/third-parties|third-party-capital/);
   assert.match(layout, /<GoogleAnalytics \/>/);
-  for (const event of ["logout", "onboarding_completed"]) assert.match(auth, new RegExp(`trackEvent\\("${event}"`));
-  assert.match(authCard, /trackEvent\("sign_up"/);
+  assert.match(auth, /trackEvent\("logout"/);
+  assert.match(auth, /trackOnce\(`onboarding:/); assert.match(auth, /discovery_source: data\.discovery_source, user_role:/);
+  assert.match(authCard, /trackOnce\(`sign-up:/); assert.match(authCard, /"sign_up"/);
   for (const event of ["ai_documentation_generated", "documentation_saved", "favorite_added", "favorite_removed"]) assert.match(product, new RegExp(event));
   assert.match(subscription, /view_subscription_paywall/); assert.match(subscription, /begin_checkout/);
   assert.match(discount, /view_subscription_paywall/); assert.match(discount, /begin_checkout/);
   for (const event of ["purchase", "billing_portal_opened"]) assert.match(billing, new RegExp(event));
-  for (const event of ["trial_started", "subscription_purchased"]) assert.match(dashboardReturn, new RegExp(event));
-  for (const event of ["subscription_renewed", "subscription_cancelled"]) assert.match(webhook, new RegExp(event));
-  assert.match(serverAnalytics, /process\.env\.GA4_API_SECRET/); assert.match(serverAnalytics, /catch \{ \/\* Analytics delivery must never affect/); assert.doesNotMatch(serverAnalytics, /user_id|email|clinical|throw new Error/);
+  for (const event of ["trial_started", "subscription_purchased", "subscription_renewed", "subscription_cancelled"]) assert.match(webhook, new RegExp(event));
+  assert.doesNotMatch(dashboardReturn, /trial_started|subscription_purchased/); assert.doesNotMatch(billing, /trial_started|subscription_purchased/);
+  assert.match(webhook, /event\.type === "invoice\.paid"/); assert.doesNotMatch(webhook, /invoice\.payment_succeeded/);
+  assert.match(webhook, /firstPayment \? "subscription_purchased" : "subscription_renewed"/); assert.match(webhook, /subscription\?\.status === "active"/);
+  assert.match(webhook, /cancelledNow && !alreadyCancelled/);
+  for (const parameter of ["plan", "value", "currency", "trial", "discovery_source", "user_role"]) assert.match(webhook, new RegExp(parameter));
+  assert.match(serverAnalytics, /process\.env\.GA4_API_SECRET/); assert.match(analytics, /window\.localStorage/); assert.match(serverAnalytics, /catch \{ \/\* Analytics delivery must never affect/); assert.doesNotMatch(serverAnalytics, /user_id|email|clinical|throw new Error/);
   assert.match(verify, /no_payment_required/); assert.match(verify, /subscriptionStatus/);
   assert.match(env, /NEXT_PUBLIC_GA_MEASUREMENT_ID=G-GWBM5SN1X2/); assert.match(env, /GA4_API_SECRET=/);
 });

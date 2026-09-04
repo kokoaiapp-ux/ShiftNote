@@ -25,9 +25,6 @@ export function DashboardCheckoutReturn() {
       .then(async (response) => response.ok ? response.json() as Promise<{ transactionId: string; eventId: string; currency: string; value: number; plan: string; paid: boolean; subscriptionStatus: string | null }> : null)
       .then((payment) => {
         if (!active || !payment) return;
-        trackOnce(`subscription:${payment.transactionId}`, payment.subscriptionStatus === "trialing" ? "trial_started" : "subscription_purchased", {
-          transaction_id: payment.transactionId, currency: payment.currency, value: payment.value, plan: payment.plan,
-        });
         if (!payment.paid) return;
         trackOnce(`purchase:${payment.transactionId}`, "purchase", {
           transaction_id: payment.transactionId, currency: payment.currency, value: payment.value,

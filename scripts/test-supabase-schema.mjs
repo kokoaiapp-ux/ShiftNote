@@ -65,13 +65,6 @@ denied = false;
 try { await db.query("insert into public.conversations (user_id,title,selected_mode,selected_template) values ($1,'Denied','nurse','custom-template')", [userTwo]); } catch { denied = true; }
 assert.equal(denied, true, "RLS denies writes for another user");
 await db.exec("reset role; reset request.jwt.claim.sub;");
-await db.query("insert into public.subscription_cache (user_id,entitlement,subscription_status) values ($1,'pro','active')", [userOne]);
-await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub', '${userOne}', false);`);
-result = await db.query("select entitlement from public.subscription_cache");
-assert.deepEqual(result.rows, [{ entitlement: "pro" }], "subscription cache is readable by its owner");
-denied = false;
-try { await db.query("update public.subscription_cache set subscription_status='expired' where user_id=$1", [userOne]); } catch { denied = true; }
-assert.equal(denied, true, "client cannot mutate the server-owned subscription cache");
 await db.exec("reset role; reset request.jwt.claim.sub;");
 await db.query("insert into public.subscription_lifecycle (user_id,has_subscribed_before,first_paid_at) values ($1,true,now())", [userOne]);
 await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub', '${userOne}', false);`);
@@ -82,7 +75,7 @@ try { await db.query("update public.subscription_lifecycle set has_subscribed_be
 assert.equal(denied, true, "client cannot change permanent paid eligibility");
 await db.exec("reset role; reset request.jwt.claim.sub;");
 await db.query("delete from auth.users where id=$1", [userOne]);
-for (const table of ["profiles", "onboarding_answers", "conversations", "messages", "favorites", "custom_templates", "user_preferences", "subscription_cache", "subscription_lifecycle"]) {
+for (const table of ["profiles", "onboarding_answers", "conversations", "messages", "favorites", "custom_templates", "user_preferences", "subscription_lifecycle"]) {
   result = await db.query(`select count(*)::int as count from public.${table} where ${table === "profiles" ? "auth_user_id" : "user_id"}=$1`, [userOne]);
   assert.equal(result.rows[0].count, 0, `${table} cascades on account deletion`);
 }
