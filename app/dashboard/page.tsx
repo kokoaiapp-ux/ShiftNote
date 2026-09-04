@@ -15,6 +15,16 @@ import { DashboardCheckoutReturn } from "@/components/dashboard/DashboardCheckou
 type DashboardMetrics = { generatedToday: number; generatedYesterday: number; timeSavedMinutes: number; favoriteDocumentation: number; recentActivity: number };
 const emptyMetrics: DashboardMetrics = { generatedToday: 0, generatedYesterday: 0, timeSavedMinutes: 0, favoriteDocumentation: 0, recentActivity: 0 };
 
+function greetingForHour(hour: number) {
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
+
+function firstName(value?: string | null) {
+  return value?.trim().split(/\s+/)[0] || "there";
+}
+
 function localDateRanges() {
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -31,7 +41,16 @@ export default function DashboardPage() {
   const auth = useAuth();
   const product = useProduct();
   const [metrics, setMetrics] = useState<DashboardMetrics>(emptyMetrics);
+  const [greeting, setGreeting] = useState(() => greetingForHour(new Date().getHours()));
   const quickTemplates = getQuickActionsForMode(product.mode.id);
+
+useEffect(() => {
+    const now = new Date();
+    const nextHour = now.getHours() < 12 ? 12 : now.getHours() < 18 ? 18 : 24;
+    const nextGreeting = new Date(now.getFullYear(), now.getMonth(), now.getDate(), nextHour);
+    const timer = window.setTimeout(() => setGreeting(greetingForHour(new Date().getHours())), nextGreeting.getTime() - now.getTime() + 1000);
+    return () => window.clearTimeout(timer);
+  }, [greeting]);
 
   const loadMetrics = useCallback(async () => {
     if (!auth.user) { setMetrics(emptyMetrics); return; }
@@ -78,7 +97,7 @@ export default function DashboardPage() {
       <DashboardCheckoutReturn />
       <section className="relative overflow-hidden rounded-[28px] bg-[var(--primary)] px-7 py-8 text-white shadow-xl md:px-10 md:py-10">
         <div className="absolute -right-16 -top-24 size-72 rounded-full bg-white/10 blur-3xl" />
-        <p className="text-sm text-white/70">Good morning, Maria</p>
+        <p className="text-sm text-white/70" suppressHydrationWarning>{greeting}, {firstName(auth.profile?.full_name || auth.user?.displayName || auth.user?.email?.split("@")[0])}</p>
         <h1 className="mt-2 max-w-2xl text-3xl font-semibold tracking-[-0.04em] md:text-4xl">Ready to simplify your documentation?</h1>
         <p className="mt-3 max-w-xl text-sm leading-6 text-white/70">Choose a structured workflow or open the copilot and describe the clinical facts in your own words.</p>
         <button className="mt-7 inline-flex h-11 items-center gap-2 rounded-xl bg-[var(--card)] px-5 text-sm font-semibold shadow-sm transition hover:-translate-y-0.5" onClick={() => { product.clearChat(); router.push("/copilot"); }} style={{ color: "var(--primary-readable)" }}>
