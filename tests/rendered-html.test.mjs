@@ -265,7 +265,8 @@ test("mobile Copilot constrains scrolling to messages and stacks the composer", 
     readFile(new URL("../components/floating-assistant/ChatInterface.tsx", import.meta.url), "utf8"),
   ]);
   assert.match(shell, /pathname === "\/copilot"/);
-  assert.match(shell, /h-\[calc\(100dvh-4rem\)\] overflow-hidden/);
+  assert.match(shell, /pathname === "\/copilot" \? "hidden" : "flex"/);
+  assert.match(shell, /h-\[100dvh\] overflow-hidden/);
   assert.match(page, /h-full min-h-0 overflow-hidden/);
   assert.match(chat, /ShiftNote AI Clinical Copilot/);
   assert.match(chat, /Current Template:/);

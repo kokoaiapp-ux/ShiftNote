@@ -79,7 +79,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="fixed inset-y-0 left-0 z-40 hidden lg:block">{sidebar}</div>
       {mobileOpen && <div className="fixed inset-0 z-50 bg-black/35 backdrop-blur-sm lg:hidden"><div className="h-full w-64">{sidebar}</div></div>}
       <div className="lg:pl-64">
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[var(--border)] bg-[color:var(--background)]/85 px-5 backdrop-blur-xl md:px-8">
+        <header className={cn("sticky top-0 z-30 h-16 items-center justify-between border-b border-[var(--border)] bg-[color:var(--background)]/85 px-5 backdrop-blur-xl md:px-8", pathname === "/copilot" ? "hidden" : "flex")}>
           <div className="flex items-center gap-3">
             <button className="grid size-9 place-items-center rounded-lg hover:bg-[var(--muted)] lg:hidden" onClick={() => setMobileOpen(true)}><Menu className="size-5" /></button>
             <div className="hidden sm:block">
@@ -95,7 +95,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="grid size-9 place-items-center rounded-full bg-[#d6c0a5] text-xs font-semibold text-[#4b3827]">{(auth.user?.displayName || auth.user?.email || "SN").split(/\s|@/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("")}</div>
           </div>
         </header>
-        <main className={cn("mx-auto max-w-[1440px]", pathname === "/copilot" ? "h-[calc(100dvh-4rem)] overflow-hidden p-3 md:p-5" : "p-5 md:p-8")}>{children}</main>
+        <main className={cn("mx-auto max-w-[1440px]", pathname === "/copilot" ? "h-[100dvh] overflow-hidden p-3 md:p-5" : "p-5 md:p-8")}>{children}</main>
       </div>
       <FloatingAssistant />
     </div>
