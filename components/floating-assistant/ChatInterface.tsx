@@ -309,7 +309,7 @@ export function ChatInterface({ messages, status, error, onSend, onClose, onNewC
         )}
       </div>
 
-      <div className={cn("shrink-0 border-t border-[var(--border)] bg-[var(--card)] p-4", workspace && "lg:pr-32")}>
+      <div className={cn("shrink-0 border-t border-[var(--border)] bg-[var(--card)] p-4", workspace && "lg:pb-16")}>
         {(speech.error || error) && <StatusMessage className="mb-2" title="Unable to use voice input" variant="error">{speech.error ?? error?.message}</StatusMessage>}
         {!speech.isSupported && !speech.error && <StatusMessage className="mb-2" title="Voice input unavailable" variant="warning">{speech.supportMessage}</StatusMessage>}
         {speech.isSupported && speech.inputDevices.length > 0 && recordingPhase === "idle" && (
