@@ -5,14 +5,13 @@ import { ChatInterface } from "./ChatInterface";
 import { useDocumentPip } from "@/hooks/useDocumentPip";
 import { useProduct } from "@/components/product/ProductProvider";
 import { PipShell } from "./PipShell";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { proPaywallHref } from "@/lib/subscription-access-client";
 import { useSubscriptionAccess } from "@/components/subscription/SubscriptionAccessProvider";
 
 export function FloatingAssistant() {
   const router = useRouter();
-  const pathname = usePathname();
   const auth = useAuth();
   const pip = useDocumentPip();
   const chat = useProduct();
@@ -38,6 +37,7 @@ export function FloatingAssistant() {
       floating={Boolean(pip.portalRoot)}
       messages={chat.messages}
       onClose={pip.close}
+      onNewConversation={() => chat.clearChat()}
       onSend={chat.sendMessage}
       status={chat.status}
     />
@@ -53,13 +53,13 @@ export function FloatingAssistant() {
       {!pip.isOpen && (
         <button
           aria-label="Open ShiftNote assistant"
-          className={`fixed right-5 z-50 hidden items-center gap-3 rounded-2xl bg-[var(--primary)] px-4 py-3.5 text-sm font-semibold text-white shadow-xl transition lg:flex hover:-translate-y-0.5 hover:brightness-95 ${pathname === "/copilot" ? "top-20" : "bottom-5"}`}
+          className="fixed bottom-5 right-5 z-50 hidden items-center gap-2 rounded-xl bg-[var(--primary)] px-3 py-2.5 text-xs font-semibold text-white shadow-xl transition lg:flex hover:-translate-y-0.5 hover:brightness-95"
           onClick={() => void openAssistant()}
           type="button"
         >
-          <span className="grid size-8 place-items-center rounded-lg bg-white/15 text-lg">✦</span>
+          <span className="grid size-6 place-items-center rounded-md bg-white/15 text-sm">✦</span>
           <span>ShiftNote</span>
-          {pip.isSupported && <span className="rounded-md bg-white/10 px-1.5 py-0.5 text-[10px] font-medium">PiP</span>}
+          {pip.isSupported && <span className="rounded bg-white/10 px-1 py-0.5 text-[9px] font-medium">PiP</span>}
         </button>
       )}
     </>

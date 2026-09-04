@@ -266,16 +266,18 @@ test("mobile Copilot constrains scrolling to messages and stacks the composer", 
   ]);
   assert.match(shell, /pathname === "\/copilot"/);
   assert.match(shell, /h-\[calc\(100dvh-4rem\)\] overflow-hidden/);
-  assert.match(page, /flex h-full min-h-0 flex-col/);
-  assert.match(page, /min-h-0 flex-1 overflow-hidden/);
-  assert.match(page, /Current Mode/);
-  assert.match(page, /Current Template/);
-  assert.match(page, /New Conversation/);
+  assert.match(page, /h-full min-h-0 overflow-hidden/);
+  assert.match(chat, /ShiftNote AI Clinical Copilot/);
+  assert.match(chat, /Current Template:/);
+  assert.match(chat, /New Conversation/);
+  assert.match(page, /onNewConversation=\{\(\) => product\.clearChat\(\)\}/);
   assert.doesNotMatch(page, /AI workspace|xl:grid-cols/);
   assert.match(chat, /min-h-0 flex-1 overflow-y-auto/);
   assert.match(chat, /flex flex-wrap items-end gap-1/);
   assert.match(chat, /order-first[\s\S]*basis-full/);
   assert.doesNotMatch(chat, /sm:order-none|sm:flex-nowrap|sm:ml-0/);
+  assert.match(chat, /workspace && "lg:pr-32"/);
+  assert.match(await readFile(new URL("../components/floating-assistant/FloatingAssistant.tsx", import.meta.url), "utf8"), /fixed bottom-5 right-5[\s\S]*px-3 py-2\.5 text-xs/);
 });
 
 test("production authentication and billing redirects use the canonical ShiftNote origin", async () => {

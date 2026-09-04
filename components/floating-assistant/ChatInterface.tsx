@@ -17,6 +17,7 @@ type Props = {
   error?: Error;
   onSend: (text: string, files?: FileList) => void;
   onClose?: () => void;
+  onNewConversation?: () => void;
   floating: boolean;
   workspace?: boolean;
 };
@@ -32,7 +33,7 @@ export function messageText(message?: UIMessage) {
     .join("");
 }
 
-export function ChatInterface({ messages, status, error, onSend, onClose, floating, workspace = false }: Props) {
+export function ChatInterface({ messages, status, error, onSend, onClose, onNewConversation, floating, workspace = false }: Props) {
   const product = useProduct();
   const [input, setInput] = useState("");
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
@@ -245,24 +246,23 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
         ? "relative flex h-full min-h-0 flex-col overflow-hidden bg-[var(--background)] text-[var(--foreground)]"
         : "relative flex h-[min(700px,calc(100vh-100px))] w-[min(410px,calc(100vw-24px))] flex-col overflow-hidden rounded-[26px] border border-[var(--border)] bg-[var(--background)] text-[var(--foreground)] shadow-[0_28px_80px_rgba(0,0,0,0.22)]"}
     >
-      {!workspace && <header className="border-b border-[var(--border)] bg-[var(--card)] px-4 py-3.5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="relative grid size-10 place-items-center rounded-xl bg-[var(--primary)] font-semibold text-white">
-              S<span className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-[var(--card)] bg-[var(--primary)]" />
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold">ShiftNote AI Clinical Copilot</h2>
-              <p className="mt-0.5 text-[11px] text-[var(--muted-foreground)]">{product.mode.name} Mode</p>
-            </div>
+      <header className="shrink-0 border-b border-[var(--border)] bg-[var(--card)] px-3.5 py-2.5 sm:px-4">
+        <div className="flex items-center gap-2.5">
+          <div className="relative grid size-9 shrink-0 place-items-center rounded-lg bg-[var(--primary)] text-sm font-semibold text-white">
+            S<span className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-[var(--card)] bg-[var(--primary)]" />
           </div>
-          {onClose && <button aria-label="Close assistant" className="grid size-9 place-items-center rounded-full hover:bg-[var(--muted)]" onClick={onClose}><X className="size-4" /></button>}
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate text-sm font-semibold">ShiftNote AI Clinical Copilot</h2>
+            <p className="text-[10px] text-[var(--muted-foreground)]">{product.mode.name} Mode</p>
+          </div>
+          {onNewConversation && <Button className="h-8 shrink-0 px-2.5 text-[11px]" onClick={onNewConversation} size="sm" variant="outline"><Plus className="size-3.5" /><span className="hidden sm:inline">New Conversation</span></Button>}
+          {onClose && <button aria-label="Close assistant" className="grid size-8 shrink-0 place-items-center rounded-full hover:bg-[var(--muted)]" onClick={onClose}><X className="size-4" /></button>}
         </div>
-        <div className="mt-3 flex items-center gap-2 rounded-lg bg-[var(--muted)] px-3 py-2 text-[11px]">
-          <span className="text-[var(--muted-foreground)]">Current template</span>
+        <div className="mt-2 flex items-center gap-2 rounded-lg bg-[var(--muted)] px-2.5 py-1.5 text-[10px]">
+          <span className="shrink-0 text-[var(--muted-foreground)]">Current Template:</span>
           <span className="truncate font-semibold">{product.template.name}</span>
         </div>
-      </header>}
+      </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5" ref={scrollRef}>
         {messages.length === 0 ? (
@@ -309,7 +309,7 @@ export function ChatInterface({ messages, status, error, onSend, onClose, floati
         )}
       </div>
 
-      <div className="border-t border-[var(--border)] bg-[var(--card)] p-4">
+      <div className={cn("shrink-0 border-t border-[var(--border)] bg-[var(--card)] p-4", workspace && "lg:pr-32")}>
         {(speech.error || error) && <StatusMessage className="mb-2" title="Unable to use voice input" variant="error">{speech.error ?? error?.message}</StatusMessage>}
         {!speech.isSupported && !speech.error && <StatusMessage className="mb-2" title="Voice input unavailable" variant="warning">{speech.supportMessage}</StatusMessage>}
         {speech.isSupported && speech.inputDevices.length > 0 && recordingPhase === "idle" && (
