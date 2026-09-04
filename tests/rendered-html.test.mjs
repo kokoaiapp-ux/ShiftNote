@@ -120,7 +120,7 @@ test("dashboard metrics use authenticated Supabase counts without dummy values",
   assert.match(dashboard, /timeSavedMinutes/);
   assert.match(dashboard, /useState\(\(\) => greetingForHour\(new Date\(\)\.getHours\(\)\)\)/);
   assert.match(dashboard, /auth\.profile\?\.full_name \|\| auth\.user\?\.displayName/);
-  assert.match(dashboard, /text-sm uppercase text-white\/70/);
+  assert.match(dashboard, /text-xs uppercase text-white\/70/);
   assert.doesNotMatch(dashboard, /Good morning, Maria/);
   assert.match(dashboard, /new Date\(now\.getFullYear\(\), now\.getMonth\(\), now\.getDate\(\)\)/);
   assert.match(route, /generatedToday \* 5/);
