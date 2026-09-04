@@ -277,7 +277,7 @@ test("mobile Copilot constrains scrolling to messages and stacks the composer", 
   assert.match(chat, /flex flex-wrap items-end gap-1/);
   assert.match(chat, /order-first[\s\S]*basis-full/);
   assert.doesNotMatch(chat, /sm:order-none|sm:flex-nowrap|sm:ml-0/);
-  assert.match(chat, /workspace && "lg:pb-16"/);
+  assert.match(chat, /workspace && "p-3 lg:pb-12"/);
   assert.match(await readFile(new URL("../components/floating-assistant/FloatingAssistant.tsx", import.meta.url), "utf8"), /fixed bottom-5 right-5[\s\S]*px-4 py-3\.5 text-sm/);
 });
 
