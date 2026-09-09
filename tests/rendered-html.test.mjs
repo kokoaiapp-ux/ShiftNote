@@ -529,7 +529,8 @@ test("Pro routes use global server-backed subscription access without per-route 
   assert.match(shell, /router\.replace\(proPaywallHref\(\)\)/);
   assert.doesNotMatch(shell, /allowedProPath/);
   assert.match(floating, /subscription\.access \|\| await subscription\.refresh\(\)/);
-  assert.match(layout, /<SubscriptionAccessProvider>/);
+  assert.match(layout, /<ApplicationProviders>/);
+  assert.match(await readFile(new URL("../components/ApplicationProviders.tsx", import.meta.url), "utf8"), /<SubscriptionAccessProvider>/);
   assert.match(provider, /REVALIDATE_INTERVAL_MS = 60_000/);
   assert.match(provider, /visibilitychange/);
   assert.match(provider, /postgres_changes/);

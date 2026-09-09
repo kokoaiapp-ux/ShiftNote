@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Menu, Sparkles, X } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 const firstTimeHref = "/subscription?flow=first-time&stage=entry";
 
@@ -20,6 +20,7 @@ export function Brand() {
 }
 
 export function PublicHeader() {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const links = [["/#features", "Features"], ["/#professions", "Professions"], ["/subscription", "Pricing"], ["/login", "Log in"], [firstTimeHref, "Get started"]];
   return (
@@ -29,6 +30,7 @@ export function PublicHeader() {
         <nav className="hidden items-center gap-7 text-sm md:flex"><Link href="/#features">Features</Link><Link href="/#professions">Professions</Link><Link href="/subscription">Pricing</Link><a href="mailto:support@shiftnote.care">Support</a><Link href="/login">Log in</Link><Link href={firstTimeHref} className="rounded-xl bg-[var(--primary)] px-4 py-2.5 font-semibold text-white">Get started</Link></nav>
         <button aria-label="Open menu" className="md:hidden" onClick={() => setOpen(!open)}>{open ? <X /> : <Menu />}</button>
       </div>
+      {pathname === "/" && <nav aria-label="ShiftNote products" className="border-t border-[var(--border)]"><div className="mx-auto flex max-w-7xl gap-6 px-5 py-3 text-xs font-semibold lg:px-8"><Link href="/" aria-current="page" className="text-[var(--primary)]">Professional</Link><Link href="/enterprise">Enterprise</Link></div></nav>}
       {open && <nav className="space-y-1 border-t border-[var(--border)] bg-[var(--card)] p-5 text-sm md:hidden">{links.map(([href, label]) => <Link className="block rounded-lg px-3 py-2 hover:bg-[var(--muted)]" href={href} key={href} onClick={() => setOpen(false)}>{label}</Link>)}</nav>}
     </header>
   );

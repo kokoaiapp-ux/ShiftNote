@@ -1,0 +1,5 @@
+import Link from "next/link";
+import { Check } from "lucide-react";
+import { MarketingChrome } from "@/components/enterprise/MarketingChrome";
+import { buttonClass, Panel } from "@/components/enterprise/ui";
+export default function DemoSuccessPage() { return <MarketingChrome><div className="mx-auto max-w-2xl px-5 py-20"><Panel><span className="grid size-12 place-items-center rounded-full bg-[var(--primary-soft)] text-[var(--primary)]"><Check /></span><h1 className="mt-6 text-3xl font-semibold tracking-tight">Demo request preview complete</h1><p className="mt-4 text-sm leading-7 text-[var(--muted-foreground)]">You’ve reached the success page. This is a visual prototype: no request was submitted, no information was saved, and no email was sent.</p><Link className={`${buttonClass} mt-7`} href="/enterprise/dashboard">Explore Enterprise Dashboard</Link><Link className="mt-5 block text-sm font-medium text-[var(--primary)]" href="/enterprise">Back to Enterprise</Link></Panel></div></MarketingChrome>; }

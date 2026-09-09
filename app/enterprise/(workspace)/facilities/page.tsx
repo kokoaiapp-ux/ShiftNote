@@ -1,0 +1,5 @@
+import Link from "next/link";
+import { Building2, MapPin } from "lucide-react";
+import { facilities } from "@/lib/enterprise/demo-data";
+import { Badge, PageIntro, Panel } from "@/components/enterprise/ui";
+export default function FacilitiesPage() { return <><PageIntro title="Facilities" description="Explore the four fictional facilities in Evergreen Care Group. Facility records are sample data only." /><div className="grid gap-5 md:grid-cols-2">{facilities.map(facility => <Panel key={facility.name}><div className="flex items-center justify-between"><Building2 className="size-6 text-[var(--primary)]" /><Badge>{facility.kind}</Badge></div><h2 className="mt-5 text-lg font-semibold">{facility.name}</h2><p className="mt-2 flex items-center gap-2 text-xs text-[var(--muted-foreground)]"><MapPin className="size-3.5" />{facility.location}</p><div className="mt-6 flex gap-8 text-sm"><p><strong>{facility.clinicians}</strong> clinicians</p><p><strong>{facility.departments}</strong> departments</p></div><Link href="/enterprise/departments" className="mt-6 block text-sm font-semibold text-[var(--primary)]">Explore departments →</Link></Panel>)}</div></>; }

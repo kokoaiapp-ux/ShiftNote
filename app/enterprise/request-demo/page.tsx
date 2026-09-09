@@ -1,0 +1,3 @@
+import { MarketingChrome } from "@/components/enterprise/MarketingChrome";
+import { DemoRequestForm } from "@/components/enterprise/DemoRequestForm";
+export default function RequestDemoPage() { return <MarketingChrome><div className="mx-auto max-w-3xl px-5 py-12"><p className="text-xs font-semibold uppercase tracking-[.16em] text-[var(--primary)]">Let’s start with your organization</p><h1 className="mt-3 text-4xl font-semibold tracking-tight">Request Enterprise Demo</h1><p className="mb-8 mt-4 text-sm leading-7 text-[var(--muted-foreground)]">Preview the information we’ll use to tailor your Enterprise experience. This form is for visual review only.</p><DemoRequestForm /></div></MarketingChrome>; }

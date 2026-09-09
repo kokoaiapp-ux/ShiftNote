@@ -1,13 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { ProductProvider } from "@/components/product/ProductProvider";
-import { AppShell } from "@/components/product/AppShell";
-import { AuthProvider } from "@/components/auth/AuthProvider";
+import { ApplicationProviders } from "@/components/ApplicationProviders";
 import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 import { TikTokPixel } from "@/components/analytics/TikTokPixel";
 import { MetaPixel } from "@/components/analytics/MetaPixel";
-import { SubscriptionAccessProvider } from "@/components/subscription/SubscriptionAccessProvider";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -24,7 +21,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <GoogleAnalytics />
         <TikTokPixel />
         <MetaPixel />
-        <AuthProvider><SubscriptionAccessProvider><ProductProvider><AppShell>{children}</AppShell></ProductProvider></SubscriptionAccessProvider></AuthProvider>
+        <ApplicationProviders>{children}</ApplicationProviders>
       </body>
     </html>
   );
