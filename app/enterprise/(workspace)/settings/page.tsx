@@ -1,3 +1,2 @@
-import { PageIntro } from "@/components/enterprise/ui";
-import { SettingsPreview } from "@/components/enterprise/SettingsPreview";
-export default function SettingsPage() { return <><PageIntro title="Settings" description="Review how organization preferences could work. These controls are local to this visual preview." /><SettingsPreview /></>; }
+import { LiveWorkspace } from '@/components/enterprise/LiveWorkspace';
+export default function Page(){return <LiveWorkspace view="settings"/>;}

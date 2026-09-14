@@ -1,0 +1,11 @@
+import { loadEnvFile } from 'node:process';
+import { spawnSync } from 'node:child_process';
+loadEnvFile('.env.local');
+const ref=process.env.SUPABASE_PROJECT_REF,password=process.env.SUPABASE_DB_PASSWORD;
+if(!ref||!password)throw new Error('SUPABASE_PROJECT_REF and SUPABASE_DB_PASSWORD are required.');
+const url=`postgresql://postgres:${encodeURIComponent(password)}@db.${ref}.supabase.co:5432/postgres`;
+const result=spawnSync(process.execPath,['node_modules/supabase/dist/supabase.js','migration','list','--db-url',url],{encoding:'utf8',timeout:45000});
+let output=(result.stdout||'')+(result.stderr||'');
+for(const secret of [url,password,process.env.SUPABASE_ACCESS_TOKEN,process.env.SUPABASE_SERVICE_ROLE_KEY].filter(Boolean))output=output.replaceAll(secret,'[redacted]');
+console.log(JSON.stringify({status:result.status,error:result.error?.code,output:output.slice(0,3000)}));
+process.exitCode=result.status===0?0:1;

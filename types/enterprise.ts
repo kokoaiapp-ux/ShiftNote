@@ -1,0 +1,17 @@
+import type { Database } from './supabase-live';
+import type { InternalRole } from '@/lib/enterprise/permissions';
+type Stamp = { created_at: string; updated_at: string };
+type Entity = Stamp & { id: string };
+export type Organization = Entity & { name: string; status: 'New'|'Approved'|'Active'|'Suspended'; subscription_status: string; contract_start: string|null; contract_end: string|null; country: string|null; state: string|null; timezone: string; reporting_period: string; include_time_saved: boolean };
+export type Facility = Entity & { organization_id: string; name: string; kind: string; location: string|null };
+export type Department = Entity & { organization_id: string; facility_id: string; name: string };
+export type EnterpriseAdmin = Stamp & { user_id: string; organization_id: string; full_name: string; role: string };
+export type Lead = Entity & { organization_name: string; contact_name: string; job_title: string; work_email: string; phone: string|null; country: string; state: string|null; clinicians: number; facilities: number; current_ehr: string; interested_in_integration: string; professions: string[]; timeline: string; notes: string|null; status: string; demo_scheduled_at: string|null; organization_id: string|null };
+export type Contract = Entity & { organization_id: string; start_date: string; end_date: string; status: string; stripe_customer_id: string|null; stripe_subscription_id: string|null; payment_status: string; amount_cents: number; currency: string; payment_received_at: string|null };
+export type Integration = Entity & { organization_id: string; ehr_type: string; connection_status: string };
+export type Ticket = Entity & { organization_id: string; created_by: string|null; subject: string; message: string; status: string };
+export type Audit = Entity & { organization_id: string|null; actor_id: string|null; action: string; entity_table: string; entity_id: string|null };
+export type Activation = Entity & { organization_id: string; email: string; token_hash: string; expires_at: string; used_at: string|null; used_by: string|null; revoked_at: string|null; email_status: string };
+export type EnterpriseDatabase = Database;
+export type Workspace = { organization: Organization; facilities: Facility[]; departments: Department[]; admins: EnterpriseAdmin[]; integrations: Integration[]; contracts: Contract[]; tickets: Ticket[]; audit: Audit[] };
+export type InternalWorkspace = { role: InternalRole; organizations: Organization[]; leads: Lead[]; contracts: Contract[]; integrations: Integration[]; tickets: Ticket[]; audit: Audit[]; activations: Omit<Activation,'token_hash'>[] };

@@ -10,6 +10,6 @@ import { isEnterprisePath } from "@/lib/enterprise/routes";
 export function ApplicationProviders({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   // Enterprise review never initializes Professional sessions, billing, or note sync.
-  if (isEnterprisePath(pathname)) return <>{children}</>;
+  if (isEnterprisePath(pathname) || pathname === '/admin' || pathname.startsWith('/admin/')) return <>{children}</>;
   return <AuthProvider><SubscriptionAccessProvider><ProductProvider><AppShell>{children}</AppShell></ProductProvider></SubscriptionAccessProvider></AuthProvider>;
 }

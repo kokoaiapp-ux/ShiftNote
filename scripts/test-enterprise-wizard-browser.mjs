@@ -1,0 +1,72 @@
+import { loadEnvFile } from 'node:process';
+import { randomBytes, randomUUID, createHash } from 'node:crypto';
+import { createClient } from '@supabase/supabase-js';
+import { chromium } from '@playwright/test';
+loadEnvFile('.env.local');
+if(process.env.SUPABASE_PROJECT_REF!=='qzdvfmtfjasdeqrfdspm')throw new Error('ShiftNote project required.');
+const base='http://localhost:3112';
+const service=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.SUPABASE_SERVICE_ROLE_KEY,{auth:{persistSession:false}});
+const run=randomUUID(),email='enterprise-browser-'+run+'@example.invalid',password=randomBytes(30).toString('base64url'),token=randomBytes(32).toString('hex');
+let leadId,orgId,browser,stage='prepare fixture';
+function data(result){if(result.error)throw new Error('Database operation failed');return result.data;}
+try {
+ const owner=data(await service.from('profiles').select('auth_user_id').eq('email','support@shiftnote.care').single());
+ const lead=data(await service.from('enterprise_leads').insert({organization_name:'BROWSER VERIFICATION '+run,contact_name:'Temporary Verification Admin',job_title:'IT verification',work_email:email,country:'US',clinicians:1,facilities:1,current_ehr:'Other',interested_in_integration:'No',timeline:'Just Exploring'}).select('id').single());
+ leadId=lead.id;
+ const approved=data(await service.rpc('enterprise_approve',{p_lead:lead.id,p_actor:owner.auth_user_id,p_hash:createHash('sha256').update(token).digest('hex'),p_hours:1}));
+ orgId=approved.organization_id;
+ stage='launch isolated browser';
+ browser=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});
+ const page=await browser.newPage();
+ page.setDefaultTimeout(20000);
+ stage='verify setup link';
+ await page.goto(base+'/enterprise/setup/'+token);
+ await page.getByRole('heading',{name:'Your organization is approved'}).waitFor();
+ await page.getByRole('button',{name:'Continue',exact:true}).click();
+ stage='account details';
+ await page.getByLabel('Full name').fill('Browser Verification Admin');
+ await page.getByRole('button',{name:'Continue',exact:true}).click();
+ stage='password step';
+ await page.getByLabel('Password',{exact:true}).fill(password);
+ await page.getByLabel('Confirm password',{exact:true}).fill(password);
+ await page.getByRole('button',{name:'Continue',exact:true}).click();
+ stage='review organization';
+ await page.getByRole('heading',{name:'Review organization'}).waitFor();
+ await page.getByRole('button',{name:'Continue',exact:true}).click();
+ stage='add facility';
+ await page.getByLabel(/^name$/i).fill('Browser Verification Facility');
+ await page.getByRole('button',{name:'Continue',exact:true}).click();
+ stage='add departments';
+ await page.getByLabel(/Departments for Browser Verification Facility/).fill('Nursing, Rehabilitation');
+ await page.getByRole('button',{name:'Continue',exact:true}).click();
+ stage='finish setup and reach dashboard';
+ await page.getByRole('button',{name:'Finish Setup',exact:true}).click();
+ await page.waitForURL('**/enterprise/dashboard',{timeout:30000});
+ const org=data(await service.from('organizations').select('status').eq('id',orgId).single());
+ if(org.status!=='Active')throw new Error('Organization did not activate');
+ const departments=data(await service.from('departments').select('id').eq('organization_id',orgId));
+ if(departments.length!==2)throw new Error('Departments not saved');
+ console.log('PASS seven-step browser wizard, administrator creation, facility/departments persistence, session, and dashboard redirect');
+ stage='reused link rejected';
+ await page.goto(base+'/enterprise/setup/'+token);
+ await page.getByRole('alert').filter({hasText:'Invalid or expired setup link.'}).waitFor();
+ console.log('PASS browser rejects used setup link');
+ stage='non-admin portal rejection';
+ await page.goto(base+'/admin');
+ await page.waitForURL('**/admin/login');
+ console.log('PASS Enterprise administrator cannot enter internal admin portal');
+}catch(error){
+ let message=error instanceof Error?error.message:'Browser verification failed';
+ for(const secret of [token,password,...Object.entries(process.env).filter(([name])=>/TOKEN|SECRET|PASSWORD|SERVICE_ROLE/.test(name)).map(([,value])=>value)].filter(Boolean))message=message.replaceAll(secret,'[redacted]');
+ console.error('FAIL browser verification stage: '+stage+'; '+message.slice(0,700));process.exitCode=1;
+}
+finally {
+ await browser?.close();
+ let failed=false;
+ const profile=await service.from('profiles').select('auth_user_id').eq('email',email).maybeSingle();
+ if(orgId&&(await service.from('organizations').delete().eq('id',orgId)).error)failed=true;
+ if(leadId&&(await service.from('enterprise_leads').delete().eq('id',leadId)).error)failed=true;
+ if(profile.data&&(await service.auth.admin.deleteUser(profile.data.auth_user_id)).error)failed=true;
+ console.log(failed?'FAIL browser fixture cleanup':'PASS browser fixtures removed; audit entries retained');
+ if(failed)process.exitCode=1;
+}

@@ -1,11 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isEnterprisePath } from "@/lib/enterprise/routes";
+import { refreshEnterpriseSession } from '@/lib/enterprise/session-proxy';
 
 const protectedPrefixes = ["/account", "/billing", "/copilot", "/dashboard", "/favorites", "/history", "/modes", "/onboarding", "/settings", "/templates"];
 
 export async function proxy(request: NextRequest) {
-  if (isEnterprisePath(request.nextUrl.pathname)) return NextResponse.next({ request });
+  if (isEnterprisePath(request.nextUrl.pathname) || request.nextUrl.pathname === '/admin' || request.nextUrl.pathname.startsWith('/admin/')) return refreshEnterpriseSession(request);
+  if (request.nextUrl.pathname.startsWith('/api/enterprise/') || request.nextUrl.pathname.startsWith('/api/admin/')) return NextResponse.next({request});
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   if (!url || !publishableKey) return NextResponse.next({ request });

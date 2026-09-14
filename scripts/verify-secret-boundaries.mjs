@@ -16,6 +16,8 @@ const secretEnvironmentNames = [
   "TIKTOK_EVENTS_API_TOKEN",
   "TIKTOK_TEST_EVENT_CODE",
   "META_CONVERSIONS_API_TOKEN",
+  "ENTERPRISE_SMTP_PASSWORD",
+  "ENTERPRISE_SMTP_USER",
 ];
 const secretValueEnvironmentNames = secretEnvironmentNames;
 const serverRequestMarkers = ["api.openai.com", "@ai-sdk/openai"];
@@ -70,6 +72,10 @@ if (process.argv.includes("--bundles")) {
   try { loadEnvFile(join(root, ".env.local")); }
   catch (error) { if (error?.code !== "ENOENT") throw error; }
   const configuredSecretValues = secretValueEnvironmentNames
+    // The SMTP login may equal our already-public support address. Its value
+    // is not a secret; accessing the SMTP environment variable in client code
+    // remains forbidden by the marker checks above. Passwords are never exempt.
+    .filter((name) => name !== "ENTERPRISE_SMTP_USER" || process.env[name] !== "support@shiftnote.care")
     .map((name) => process.env[name])
     .filter((value) => value && value.length >= 12);
   for (const directory of [".vercel/output/static", "dist/client"]) {

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ApplicationProviders } from "@/components/ApplicationProviders";
+import { AnalyticsBoundary } from '@/components/enterprise/AnalyticsBoundary';
 import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 import { TikTokPixel } from "@/components/analytics/TikTokPixel";
 import { MetaPixel } from "@/components/analytics/MetaPixel";
@@ -18,9 +19,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <GoogleAnalytics />
+        <AnalyticsBoundary><GoogleAnalytics />
         <TikTokPixel />
-        <MetaPixel />
+        <MetaPixel /></AnalyticsBoundary>
         <ApplicationProviders>{children}</ApplicationProviders>
       </body>
     </html>
