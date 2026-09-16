@@ -6,6 +6,14 @@ import { refreshEnterpriseSession } from '@/lib/enterprise/session-proxy';
 const protectedPrefixes = ["/account", "/billing", "/copilot", "/dashboard", "/favorites", "/history", "/modes", "/onboarding", "/settings", "/templates"];
 
 export async function proxy(request: NextRequest) {
+  // SMART technical routes use their own server session, not Professional or Enterprise Admin Auth.
+  if (request.nextUrl.pathname === '/fhir' || request.nextUrl.pathname.startsWith('/fhir/') || request.nextUrl.pathname === '/enterprise/clinician') {
+    const response = NextResponse.next({request});
+    response.headers.set('Cache-Control', 'no-store, private');
+    response.headers.set('Referrer-Policy', 'no-referrer');
+    response.headers.set('X-Robots-Tag', 'noindex, nofollow');
+    return response;
+  }
   if (isEnterprisePath(request.nextUrl.pathname) || request.nextUrl.pathname === '/admin' || request.nextUrl.pathname.startsWith('/admin/')) return refreshEnterpriseSession(request);
   if (request.nextUrl.pathname.startsWith('/api/enterprise/') || request.nextUrl.pathname.startsWith('/api/admin/')) return NextResponse.next({request});
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

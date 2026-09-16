@@ -18,6 +18,10 @@ const secretEnvironmentNames = [
   "META_CONVERSIONS_API_TOKEN",
   "ENTERPRISE_SMTP_PASSWORD",
   "ENTERPRISE_SMTP_USER",
+  "SMART_SESSION_ENCRYPTION_KEY",
+  "SMART_CLIENT_SECRETS_JSON",
+  "EPIC_SANDBOX_CLIENT_ID",
+  "EPIC_SANDBOX_CLIENT_SECRET",
 ];
 const secretValueEnvironmentNames = secretEnvironmentNames;
 const serverRequestMarkers = ["api.openai.com", "@ai-sdk/openai"];
