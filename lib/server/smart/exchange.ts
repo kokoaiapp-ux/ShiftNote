@@ -8,7 +8,10 @@ export async function readJson(response:Response) {
   const reader=response.body.getReader();const chunks:Uint8Array[]=[];let size=0;
   try {while(true){const {value,done}=await reader.read();if(done)break;size+=value.byteLength;if(size>65536)throw new Error('SMART response exceeded limit.');chunks.push(value);}}
   finally{await reader.cancel().catch(()=>{});}
-  return JSON.parse(Buffer.concat(chunks).toString('utf8')) as Record<string,unknown>;
+  // JSON parser errors can embed fragments of the provider response (including tokens).
+  // Discard the original exception and its cause before it can cross this boundary.
+  try { return JSON.parse(Buffer.concat(chunks).toString('utf8')) as Record<string,unknown>; }
+  catch { throw new Error('Invalid SMART provider JSON.'); }
 }
 export function providerClient(secrets:(connection:SmartConnection)=>Record<string,string>,fetcher:typeof fetch=fetch) {
   return {

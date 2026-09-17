@@ -20,7 +20,21 @@ export interface SmartStore {
   audit(reason:string,launch?:SmartLaunch):Promise<void>;
 }
 export type SmartDependencies={store:SmartStore;key:()=>Buffer;now?:()=>number;exchange:(connection:SmartConnection,code:string,verifier:string)=>Promise<TokenBundle>;identity:(connection:SmartConnection,tokens:TokenBundle,nonce:string)=>Promise<ClinicianIdentity>};
-export class SmartFailure extends Error { constructor(public reason:string){super('SMART authorization failed.');} }
+const safeFailureReasons = new Set([
+  'invalid_configuration', 'invalid_response', 'invalid_launch', 'unknown_connection',
+  'launch_unavailable', 'missing_state', 'invalid_state', 'browser_mismatch',
+  'reused_state', 'expired_state', 'connection_unavailable', 'oauth_error',
+  'missing_code', 'invalid_code', 'issuer_mismatch', 'token_exchange_failed',
+  'invalid_token_response', 'identity_verification_failed', 'callback_unavailable',
+]);
+// Runtime allowlist: exception/audit text must never inherit provider-controlled data.
+export function safeFailureReason(reason:unknown):string {
+  return typeof reason==='string'&&safeFailureReasons.has(reason)?reason:'callback_unavailable';
+}
+export class SmartFailure extends Error {
+  public reason:string;
+  constructor(reason:string){super('SMART authorization failed.');this.reason=safeFailureReason(reason);}
+}
 export function getCookie(request:Request,name:string) {
   const values=(request.headers.get('cookie')||'').split(';').map(v=>v.trim()).filter(v=>v.startsWith(name+'='));
   const value=values.length===1?values[0].slice(name.length+1):'';return opaquePattern.test(value)?value:null;
@@ -44,7 +58,7 @@ export function smartHandlers(deps:SmartDependencies) {
   const now=deps.now||Date.now;
   async function denied(reason:string,launch?:SmartLaunch) {
     // Audit only fixed internal reason strings. Never record URLs, codes, tokens, or provider errors.
-    try{await deps.store.audit(reason,launch);}catch{/* Database outages fail closed without logging request data. */}
+    try{await deps.store.audit(safeFailureReason(reason),launch);}catch{/* Database outages fail closed without logging request data. */}
     return redirect('/fhir/error');
   }
   return {

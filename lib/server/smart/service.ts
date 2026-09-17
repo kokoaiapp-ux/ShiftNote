@@ -2,7 +2,7 @@ import 'server-only';
 import { createClient } from '@supabase/supabase-js';
 import type { SmartConnection, SmartDatabase, SmartLaunch } from '@/types/smart';
 import { encryptionKey, hash, unseal } from './crypto';
-import { getCookie, sessionCookie, smartHandlers, type SmartStore, type TokenBundle, type ClinicianIdentity } from './core';
+import { getCookie, sessionCookie, smartHandlers, safeFailureReason, type SmartStore, type TokenBundle, type ClinicianIdentity } from './core';
 import { providerClient } from './exchange';
 import { epicSandboxCredentials, epicSandboxVendor } from './epic-sandbox';
 
@@ -30,7 +30,7 @@ function store():SmartStore {
       return result as unknown as {reason:string;launch?:SmartLaunch};
     },
     async complete(launch,sessionHash,encrypted,expiresAt){checked(await db.rpc('smart_complete_callback',{p_launch_id:launch.id,p_session_hash:sessionHash,p_encrypted_payload:encrypted,p_expires_at:expiresAt}));},
-    async audit(reason,launch){checked(await db.from('enterprise_audit_logs').insert({organization_id:launch?.organization_id||null,action:`SMART Authorization Failed: ${reason}`,entity_table:'smart_launch_sessions',entity_id:launch?.id||null}));}
+    async audit(reason,launch){checked(await db.from('enterprise_audit_logs').insert({organization_id:launch?.organization_id||null,action:`SMART Authorization Failed: ${safeFailureReason(reason)}`,entity_table:'smart_launch_sessions',entity_id:launch?.id||null}));}
   };
 }
 export function smartService() {
